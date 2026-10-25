@@ -15,6 +15,26 @@ function cylinder(parent,r1,r2,h,x,y,z,material,segments=12) {
   mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;
 }
 
+
+// Decorative village planting uses batches instead of one draw call per petal.
+function plantBatch(group,geometry,material,items,place,palette=null) {
+  const mesh=new THREE.InstancedMesh(geometry,material,items.length);
+  const dummy=new THREE.Object3D();
+  const color=new THREE.Color();
+  items.forEach((item,i)=>{
+    dummy.position.set(0,0,0);dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);
+    place(dummy,item,i);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i,dummy.matrix);
+    if(palette)mesh.setColorAt(i,color.set(palette(item,i)));
+  });
+  mesh.instanceMatrix.needsUpdate=true;
+  if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+  mesh.castShadow=false;mesh.receiveShadow=true;
+  group.add(mesh);
+  return mesh;
+}
+
 function labelSprite(text,scale=30) {
   const canvas=document.createElement('canvas');canvas.width=640;canvas.height=160;
   const ctx=canvas.getContext('2d');
@@ -119,13 +139,48 @@ export class Village {
   }
 
   flowerPatch(x,z,r=7) {
-    const leaf=mat('#6c9a51'),flowers=[mat('#f3d36d'),mat('#e7b6bf'),mat('#e3c8ed'),mat('#f6ede0')];
-    for(let i=0;i<14;i++){
-      const a=i*2.39996,rad=Math.sqrt(i/14)*r,px=x+Math.cos(a)*rad,pz=z+Math.sin(a)*rad;
-      const base=this.elevation(px,pz);
-      cylinder(this.group,.23,.3,1.5,px,base+.8,pz,leaf,5);
-      sphere(this.group,.85,px,base+1.5,pz,flowers[i%flowers.length]);
+    const palette=['#f3d36d','#edaebb','#dfc5ef','#f5e5b1','#e89d63'];
+    const flowers=[];
+    for(let i=0;i<18;i++){
+      const a=i*2.399963,rad=Math.sqrt((i+.4)/18)*r;
+      const px=x+Math.cos(a)*rad,pz=z+Math.sin(a)*rad;
+      flowers.push({
+        x:px,y:this.elevation(px,pz),z:pz,
+        h:2.1+(i%5)*.19,turn:a,
+        color:palette[i%palette.length]
+      });
     }
+    plantBatch(this.group,new THREE.CylinderGeometry(.09,.14,2.1,5),
+      mat('#65965b'),flowers,
+      (d,p)=>{d.position.set(p.x,p.y+p.h*.48,p.z);d.scale.y=p.h/2.1;});
+    const leafGeometry=new THREE.ConeGeometry(.54,1.65,5);
+    for(const side of [-1,1]){
+      plantBatch(this.group,leafGeometry,mat('#81a860'),flowers,
+        (d,p)=>{
+          d.position.set(p.x+side*.45,p.y+.85,p.z);
+          d.rotation.z=side*.75+p.turn*.015;
+          d.scale.set(.8,.95,.6);
+        });
+    }
+    const petals=new THREE.SphereGeometry(.57,7,5);
+    const petalMaterial=mat('#ffffff',{flatShading:true});
+    for(let k=0;k<5;k++){
+      const a=k*Math.PI*2/5;
+      plantBatch(this.group,petals,petalMaterial,flowers,
+        (d,p)=>{
+          const angle=a+p.turn;
+          d.position.set(
+            p.x+Math.cos(angle)*.52,
+            p.y+p.h+.12+Math.sin(a*2)*.08,
+            p.z+Math.sin(angle)*.52
+          );
+          d.rotation.y=angle;
+          d.scale.set(.8,.43,.64);
+        },p=>p.color);
+    }
+    plantBatch(this.group,new THREE.SphereGeometry(.32,7,5),
+      mat('#b87943'),flowers,
+      (d,p)=>d.position.set(p.x,p.y+p.h+.15,p.z));
   }
 
   lantern(x,z) {
@@ -137,10 +192,30 @@ export class Village {
 
   shadeTree(x,z,scale=1) {
     const y=this.elevation(x,z);
-    cylinder(this.group,.9*scale,1.4*scale,13*scale,x,y+6.5*scale,z,mat('#92765b'),9);
-    const leaf=mat('#78ab71');
-    for(const [dx,dy,dz,r] of [[0,17,0,7],[-4,15,2,5],[4,16,-2,5],[0,19,4,4]]){
-      sphere(this.group,r*scale,x+dx*scale,y+dy*scale,z+dz*scale,leaf);
+    cylinder(this.group,.85*scale,1.3*scale,13*scale,
+      x,y+6.5*scale,z,mat('#8d755a'),9);
+    for(const side of [-1,1]){
+      const branch=cylinder(this.group,.24*scale,.48*scale,7*scale,
+        x+side*2.25*scale,y+11.5*scale,z+.25*scale,
+        mat('#93785d'),7);
+      branch.rotation.z=side*.63;
+    }
+    const canopy=[
+      [0,17,0,6.2,'#76a666'],[-4.3,15.3,1,4.5,'#6d9a5c'],
+      [4.2,15.8,-1.4,4.75,'#90b777'],
+      [-1.6,19,2.2,4.05,'#98bf80'],
+      [2.2,18.1,3.1,4.15,'#79a968'],
+      [1.2,18,-4.1,4,'#638e57'],
+      [-1,21,.2,3.35,'#9ac283']
+    ];
+    for(const [dx,dy,dz,r,color] of canopy){
+      const mesh=new THREE.Mesh(
+        new THREE.IcosahedronGeometry(r*scale,1),
+        mat(color,{flatShading:true})
+      );
+      mesh.position.set(x+dx*scale,y+dy*scale,z+dz*scale);
+      mesh.castShadow=true;mesh.receiveShadow=true;
+      this.group.add(mesh);
     }
   }
 

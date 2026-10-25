@@ -30,7 +30,7 @@ export class Player {
   update(dt,input,cameraHeading,allowMovement=true) {
     const move=allowMovement?input.moveAxis():{x:0,y:0};
     const walking=Math.hypot(move.x,move.y)>.05;
-    const speed=input.sprinting()?32:20;
+    const speed=input.sprinting()?39:28;
     if(walking) {
       const dx=move.x*Math.cos(cameraHeading)+move.y*Math.sin(cameraHeading);
       const dz=move.x*Math.sin(cameraHeading)-move.y*Math.cos(cameraHeading);
@@ -40,7 +40,7 @@ export class Player {
       this.facing=Math.atan2(-dx,-dz);
       const diff=Math.atan2(Math.sin(this.facing-this.group.rotation.y),Math.cos(this.facing-this.group.rotation.y));
       this.group.rotation.y+=diff*Math.min(1,dt*10);
-      this.walkPhase+=dt*(input.sprinting()?13:9);
+      this.walkPhase+=dt*(input.sprinting()?14:11.5);
     }
     if(allowMovement&&input.consumeJump()&&this.airOffset<=.01){this.verticalVelocity=14.5;this.airOffset=.01;}
     this.airOffset+=this.verticalVelocity*dt;

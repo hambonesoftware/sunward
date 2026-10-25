@@ -13,6 +13,7 @@
     {"id":"sugar-maple","common":"Sugar maple","latin":"Acer saccharum","type":"broadleaf","color":"#75a85d","weight":22,"minMetersAboveWater":8},
     {"id":"paper-birch","common":"Paper birch","latin":"Betula papyrifera","type":"birch","color":"#a4c784","weight":15,"minMetersAboveWater":5},
     {"id":"red-oak","common":"Northern red oak","latin":"Quercus rubra","type":"broadleaf","color":"#648c48","weight":18,"minMetersAboveWater":7},
+    {"id":"lowbush-blueberry","common":"Lowbush blueberry","latin":"Vaccinium angustifolium","type":"shrub","color":"#5e9050","weight":13,"minMetersAboveWater":6},
     {"id":"dune-grass","common":"American beachgrass","latin":"Ammophila breviligulata","type":"grass","color":"#c4b76c","weight":18,"maxMetersAboveWater":15},
     {"id":"cattail","common":"Broadleaf cattail","latin":"Typha latifolia","type":"reed","color":"#779b52","weight":13,"maxMetersAboveWater":5},
     {"id":"goldenrod","common":"Canada goldenrod","latin":"Solidago canadensis","type":"flower","color":"#e4b94a","weight":16,"minMetersAboveWater":3}
