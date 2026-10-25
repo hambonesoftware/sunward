@@ -1,0 +1,11 @@
+{
+  "name": "sunward-michigan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Modular Three.js Great Lakes exploration game with USGS terrain",
+  "scripts": {
+    "validate": "node tools/validate_site.mjs",
+    "serve": "node tools/serve.mjs"
+  }
+}

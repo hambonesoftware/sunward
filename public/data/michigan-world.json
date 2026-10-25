@@ -1,0 +1,28 @@
+{
+  "id": "michigan",
+  "title": "Bayberry Cove",
+  "subtitle": "A little place on Lake Michigan",
+  "region": "Western Michigan · Great Lakes",
+  "terrainFile": "./data/michigan-dem.json",
+  "waterElevationMeters": 176.6,
+  "verticalScale": 1.08,
+  "start": {"x": 240, "z": 125, "facing": 0},
+  "village": {"x": 240, "z": -70, "radius": 190},
+  "species": [
+    {"id":"white-pine","common":"Eastern white pine","latin":"Pinus strobus","type":"conifer","color":"#3b765b","weight":26,"minMetersAboveWater":5},
+    {"id":"sugar-maple","common":"Sugar maple","latin":"Acer saccharum","type":"broadleaf","color":"#75a85d","weight":22,"minMetersAboveWater":8},
+    {"id":"paper-birch","common":"Paper birch","latin":"Betula papyrifera","type":"birch","color":"#a4c784","weight":15,"minMetersAboveWater":5},
+    {"id":"red-oak","common":"Northern red oak","latin":"Quercus rubra","type":"broadleaf","color":"#648c48","weight":18,"minMetersAboveWater":7},
+    {"id":"dune-grass","common":"American beachgrass","latin":"Ammophila breviligulata","type":"grass","color":"#c4b76c","weight":18,"maxMetersAboveWater":15},
+    {"id":"cattail","common":"Broadleaf cattail","latin":"Typha latifolia","type":"reed","color":"#779b52","weight":13,"maxMetersAboveWater":5},
+    {"id":"goldenrod","common":"Canada goldenrod","latin":"Solidago canadensis","type":"flower","color":"#e4b94a","weight":16,"minMetersAboveWater":3}
+  ],
+  "residents": [
+    {"id":"june","name":"June Bell","job":"Baker","color":"#ed9a56","home":"bakery","schedule":[{"hour":0,"place":"home"},{"hour":6,"place":"bakery"},{"hour":13,"place":"market"},{"hour":17,"place":"bakery"},{"hour":20,"place":"home"}],"intro":"I always make one extra cherry turnover for a traveler. It just feels right.","late":"The ovens are cooling, but I'll be back before sunrise!"},
+    {"id":"mateo","name":"Mateo Rivera","job":"Fisherman","color":"#5ea2c4","home":"cottages","schedule":[{"hour":0,"place":"home"},{"hour":5,"place":"dock"},{"hour":12,"place":"market"},{"hour":15,"place":"dock"},{"hour":19,"place":"home"}],"intro":"The lake looks different every morning. You should see it before the gulls wake.","late":"Tomorrow, find me at the water. Bring your curiosity."},
+    {"id":"ellen","name":"Ellen Park","job":"Community gardener","color":"#93b96c","home":"cottages","schedule":[{"hour":0,"place":"home"},{"hour":8,"place":"garden"},{"hour":12,"place":"market"},{"hour":14,"place":"garden"},{"hour":19,"place":"home"}],"intro":"Maples, birches, goldenrod… our little shore has more stories than you think.","late":"The flowers need sleep, too. We'll look again in the morning."},
+    {"id":"cal","name":"Cal Walker","job":"Park ranger","color":"#85b19a","home":"ranger","schedule":[{"hour":0,"place":"home"},{"hour":7,"place":"trail"},{"hour":12,"place":"ranger"},{"hour":16,"place":"trail"},{"hour":20,"place":"home"}],"intro":"The dunes are always moving, even when they look perfectly still.","late":"Good evening. The path lanterns will guide you back."},
+    {"id":"nadia","name":"Nadia Brooks","job":"Bookseller","color":"#b99ed5","home":"bookshop","schedule":[{"hour":0,"place":"home"},{"hour":9,"place":"bookshop"},{"hour":13,"place":"market"},{"hour":15,"place":"bookshop"},{"hour":19,"place":"home"}],"intro":"I keep a handwritten map of every secret little corner of this town.","late":"The best chapters always end somewhere warm."},
+    {"id":"dot","name":"Dot Miller","job":"Retired schoolteacher","color":"#d77f7d","home":"cottages","schedule":[{"hour":0,"place":"home"},{"hour":7,"place":"garden"},{"hour":11,"place":"market"},{"hour":15,"place":"bench"},{"hour":20,"place":"home"}],"intro":"A town is nothing without people who stop to say hello. So—hello!", "late":"The stars over the lake are worth staying up for."}
+  ]
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#e9d8b0" />
+  <meta name="description" content="Sunward: Bayberry Cove, a joyful Michigan exploration adventure generated from real USGS elevation data." />
+  <title>Sunward — Bayberry Cove</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <div id="app">
+    <canvas id="world" aria-label="Three-dimensional exploration world"></canvas>
+    <div id="ambient-vignette"></div>
+
+    <header class="topbar">
+      <div class="place-label"><span class="tiny-emblem">✺</span><div><strong>BAYBERRY COVE</strong><small>WESTERN MICHIGAN · GREAT LAKES</small></div></div>
+      <div class="clock-card"><span class="sun-icon">☀</span><span id="clock">9:42 AM</span><button id="skip-time" title="Skip forward two game hours">+2h</button></div>
+    </header>
+
+    <section class="journal" aria-label="Current adventure">
+      <div class="eyebrow"><span class="tiny-glyph">✦</span> YOUR LITTLE ADVENTURE</div>
+      <strong id="quest-title">Meet June at the bakery</strong>
+      <p id="quest-description">Start by saying hello to a friendly local.</p>
+      <div class="journal-footer"><span id="residents-count">0 / 6 neighbors met</span><span id="plants-count">0 / 5 plants found</span></div>
+    </section>
+
+    <div class="bottom-left">
+      <div class="map-frame"><canvas id="mini-map" width="164" height="164" aria-label="Local map"></canvas><span class="map-n">N</span></div>
+      <div class="location-caption"><span>✦</span> Wandering is encouraged</div>
+    </div>
+
+    <div class="bottom-right">
+      <div id="action-hint" class="action-hint" hidden><kbd>E</kbd><span id="action-text"></span></div>
+      <button id="action-button" class="game-button" hidden>Talk / Discover</button>
+      <button id="jump-button" class="jump-button" aria-label="Jump">↟</button>
+    </div>
+
+    <div id="joystick" class="joystick" aria-label="Movement control"><div class="joystick-thumb"></div></div>
+    <p class="desktop-help">WASD / arrows to walk &nbsp;·&nbsp; Drag to look &nbsp;·&nbsp; Space to jump &nbsp;·&nbsp; E to talk &nbsp;·&nbsp; Shift to run</p>
+
+    <div id="dialog" class="dialog-backdrop" hidden>
+      <section class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div id="dialog-eyebrow" class="eyebrow">A FRIENDLY FACE</div>
+        <h2 id="dialog-title">Hello!</h2>
+        <p id="dialog-text"></p>
+        <button id="dialog-close" class="primary-button">Keep exploring <span>→</span></button>
+      </section>
+    </div>
+
+    <div id="start-screen" class="start-screen">
+      <div class="start-pattern"></div>
+      <div class="start-card">
+        <div class="start-kicker"><span class="sunburst">✳</span> A SMALL PLACE IN A VERY BIG COUNTRY</div>
+        <h1>SUNWARD<span class="mark">.</span></h1>
+        <div class="handwritten">The Bayberry Cove chapter</div>
+        <p>Real Michigan hills. Great Lakes wildflowers. Neighbors who know your name. No hurry to get anywhere.</p>
+        <div class="divider-ornament">✿ &nbsp; ✿ &nbsp; ✿</div>
+        <button id="start-button" class="primary-button" disabled>Preparing the lakeshore…</button>
+        <p class="source-note">Real terrain · An imaginary village · A hand-built little adventure</p>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+    <div id="error" class="error-banner" hidden></div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
