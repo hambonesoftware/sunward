@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {renderVegetationSpecies} from './FoliageModels.js';
+import {HabitatMap} from './HabitatMap.js';
+import {createPlantRenderer} from './RealisticPlants.js';
 
 function seededRandom(seed) {
   return () => {
@@ -12,12 +13,16 @@ function seededRandom(seed) {
 const isTree=type=>['conifer','broadleaf','birch'].includes(type);
 
 export class Vegetation {
-  constructor(scene,terrain,profile) {
+  constructor(scene,terrain,profile,landcover,assets) {
     this.group=new THREE.Group();scene.add(this.group);
     this.terrain=terrain;this.profile=profile;
+    this.habitat=landcover?new HabitatMap(landcover,terrain):null;
+    this.assets=assets;
+    this.renderers=[];
     this.random=seededRandom(43119);
     this.specimens=[];
     this.populate();this.addSpecimens();
+    this.update(0,0,profile.start);
   }
 
   availableSpecies(x,z) {
@@ -32,20 +37,25 @@ export class Vegetation {
 
   chooseSpecies(x,z) {
     const list=this.availableSpecies(x,z);
-    const total=list.reduce((sum,s)=>sum+s.weight,0);
+    const above=this.terrain.rawElevation(x,z)-this.profile.waterElevationMeters;
+    const weights=list.map(s=>s.weight*(this.habitat?.suitability(s,x,z,above)??1));
+    const total=weights.reduce((sum,w)=>sum+w,0);
     if(!total)return null;
     let target=this.random()*total;
-    for(const species of list){target-=species.weight;if(target<=0)return species;}
+    for(let i=0;i<list.length;i++){
+      target-=weights[i];if(target<=0)return list[i];
+    }
     return list[list.length-1];
   }
 
   populate() {
     const bySpecies=new Map(this.profile.species.map(s=>[s.id,[]]));
     const {width,depth}=this.terrain;
-    for(let i=0;i<3150;i++){
+    for(let i=0;i<4300;i++){
       const x=(this.random()-.5)*(width-65),z=(this.random()-.5)*(depth-65);
       const above=this.terrain.rawElevation(x,z)-this.profile.waterElevationMeters;
       if(above<.2||this.terrain.slopeAt(x,z)>.84)continue;
+      if(this.habitat?.classAt(x,z)===11)continue;
       const town=this.profile.village;
       const dist=Math.hypot(x-town.x,z-town.z);
       if(dist<town.radius+34)continue;
@@ -63,7 +73,7 @@ export class Vegetation {
   }
 
   drawSpecies(species,instances) {
-    renderVegetationSpecies(this.group,species,instances);
+    this.renderers.push(createPlantRenderer(this.group,species,instances,this.assets));
   }
 
   addSpecimens() {
@@ -86,7 +96,12 @@ export class Vegetation {
     }
   }
 
-  update(dt,elapsed) {
+  update(dt,elapsed,playerPosition) {
+    this.assets.setWindTime(elapsed);
+    if(playerPosition){
+      for(const renderer of this.renderers)
+        renderer.update(playerPosition.x,playerPosition.z);
+    }
     for(const p of this.specimens){
       if(p.discovered){p.marker.visible=false;continue;}
       p.marker.rotation.y+=dt*.7;

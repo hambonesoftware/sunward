@@ -2,7 +2,8 @@
 
 A cozy third-person Three.js exploration game with six scheduled residents, a small
 quest chain, regional flora discovery, a day/night clock, original procedural 3D
-assets, and **real USGS elevation data** from the Lake Michigan dunes near Grand Haven.
+assets, **48 self-hosted CC0 forest models**, phototextured branch cards, and
+**real USGS elevation and 2024 land-cover data** from the Lake Michigan dunes near Grand Haven.
 
 The whole runtime uses ES modules and static JSON. It needs no backend, database,
 API key, build step, sign-in, or CDN at runtime, and works on GitHub Pages.
@@ -60,7 +61,12 @@ doesn't break module or heightmap loading.
 | `public/src/main.js` | Composition root and frame loop |
 | `public/src/engine/` | Event bus and desktop/touch input |
 | `public/src/world/Terrain.js` | Height-grid interpolation, mesh, terrain colors and village grading |
-| `public/src/world/Vegetation.js` | Seeded flora distribution and GPU-instanced regional species |
+| `public/src/world/Vegetation.js` | Seeded flora distribution and regional species logic |
+| `public/src/world/HabitatMap.js` | 2024 USGS NLCD class mapping and artistic suitability rules |
+| `public/src/world/RealisticPlants.js` | Leaf-texture cards, real branches, plant instancing, distance LOD |
+| `public/src/world/FoliageTextures.js` | Five optimized leaf/bark textures and GPU wind shader |
+| `public/src/world/GroundCover.js` | Player-relative grass and leaf litter instancing |
+| `public/src/world/FoundModels.js` | Optional, asynchronous CC0 GLB library with per-model batching and visibility culling |
 | `public/src/world/Village.js` | Buildings, paths, dock, plaza, trees and walkable surfaces |
 | `public/src/world/Atmosphere.js` | Lake water, daylight, birds and clouds |
 | `public/src/actors/` | Third-person explorer and daily NPC movement |
@@ -68,6 +74,8 @@ doesn't break module or heightmap loading.
 | `public/src/ui/HUD.js` | Quest panel, mini-map, dialogues and responsive controls |
 | `public/data/michigan-world.json` | Modular region profile, species and residents |
 | `public/data/michigan-dem.json` | Preprocessed USGS 3DEP height grid |
+| `public/data/michigan-landcover.json` | 2024 USGS Annual NLCD grid (80 × 64) |
+| `public/data/model-library.json` | 48 source-linked CC0 models, types, scale and spawn budgets |
 
 To create a new region, provide a new elevation grid and world profile, change
 the profile URL in the composition root, and extend the region-specific village
@@ -85,9 +93,43 @@ streets, buildings or individual trees**.
 - **Conversion:** `tools/build_dem.py` reads the source Float32 TIFF and writes
   `michigan-dem.json` with north-to-south rows. The original TIFF is bundled.
 - **Source endpoint:** https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer
+- **Land cover:** USGS Annual National Land Cover Database 2024, Collection 1;
+  downloaded from https://di-nlcd.img.arcgis.com/arcgis/rest/services/USA_NLCD_Annual_LandCover/ImageServer
+  for the matching DEM bounds and saved locally as a classified 80 × 64 grid.
 - **Vegetation:** game-authored, region-appropriate Michigan species and
-  terrain-based distribution—not mapped positions of actual plants.
+  terrain/land-cover-based *probabilistic* placement—not mapped positions of actual plants.
 
-Three.js 0.179.1 is bundled under its MIT license in `public/vendor/`. The game
+## Foliage assets and free 3D models
+
+- The game ships 48 individual low-poly glTF 2.0 models from the
+  [Dense Temperate Forest Flora pack](https://3dassets.dev/packs/dense-temperate-forest-flora).
+  The publisher releases the pack under **CC0 1.0**, so models can be bundled
+  directly on GitHub Pages. Attribution is not required, but provenance is
+  retained in `public/data/model-library.json`.
+- The pack contains European species and has a faceted low-poly art style.
+  These are visual stand-ins and ornamental features, not a scientific Michigan
+  species inventory. Michigan botanical names in the field journal still come
+  from the region's curated species list.
+- Five photo-inspired WebP texture atlases (`maple`, `oak`, `birch`, `pine`,
+  `bark`) are generated project assets. Cutout leaf cards and branches create
+  additional volume alongside the imported models. A lightweight wind shader
+  bends the cards, while plant instances use distance-appropriate mesh detail.
+- Imported models load four at a time **after the game is ready**. If any one
+  fails, players can still explore and use the original game mechanics.
+- Mobile devices use fewer instances and shorter draw distances. Full desktop
+  and iPad GPU rendering remains important to test on actual hardware.
+
+To re-download CC0 models from their catalog slugs, run:
+
+```bash
+python3 tools/fetch_cc0_models.py
+```
+
+The original 2024 USGS classified TIFF and the original larger plant texture
+sources are not necessary at runtime. Scripts to regenerate their optimized
+outputs live under `tools/`.
+
+Three.js 0.179.1, including its official `GLTFLoader` add-on, is bundled under
+its MIT license in `public/vendor/`. The game
 code is designed for further extension rather than being tied to one town.
 

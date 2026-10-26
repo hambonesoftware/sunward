@@ -6,6 +6,9 @@ import {QuestJournal} from './systems/QuestJournal.js';
 import {Interaction} from './systems/Interaction.js';
 import {Terrain} from './world/Terrain.js';
 import {Vegetation} from './world/Vegetation.js';
+import {GroundCover} from './world/GroundCover.js';
+import {FoundModels} from './world/FoundModels.js';
+import {loadFoliageTextures} from './world/FoliageTextures.js';
 import {Village} from './world/Village.js';
 import {Water,Atmosphere} from './world/Atmosphere.js';
 import {Player} from './actors/Player.js';
@@ -13,7 +16,7 @@ import {Residents} from './actors/Residents.js';
 import {HUD} from './ui/HUD.js';
 
 class Game {
-  constructor(profile,dem) {
+  constructor(profile,dem,landcover,foliageAssets) {
     this.profile=profile;
     this.events=new EventBus();
     this.running=false;
@@ -31,8 +34,10 @@ class Game {
     this.camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.5,2200);
     this.terrain=new Terrain(this.scene,dem,profile);
     this.water=new Water(this.scene,this.terrain);
-    this.village=new Village(this.scene,this.terrain,profile);
-    this.vegetation=new Vegetation(this.scene,this.terrain,profile);
+    this.village=new Village(this.scene,this.terrain,profile,foliageAssets);
+    this.vegetation=new Vegetation(this.scene,this.terrain,profile,landcover,foliageAssets);
+    this.groundCover=new GroundCover(this.scene,this.terrain,this.village,profile,landcover,foliageAssets);
+    this.foundModels=new FoundModels(this.scene,this.terrain,this.village,landcover);
     this.atmosphere=new Atmosphere(this.scene,this.terrain);
     this.player=new Player(this.scene,this.terrain,this.village,profile.start);
     this.residents=new Residents(this.scene,this.terrain,this.village,profile,this.clock);
@@ -87,8 +92,11 @@ class Game {
     if(this.running) {
       this.clock.update(dt);
       this.player.update(dt,this.input,this.heading,this.ui.dialog.hidden);
+      this.village.update(this.player.position);
       this.residents.update(dt,this.elapsed);
-      this.vegetation.update(dt,this.elapsed);
+      this.vegetation.update(dt,this.elapsed,this.player.position);
+      this.groundCover.update(this.player.position);
+      this.foundModels.update(this.player.position);
       if(this.ui.dialog.hidden)this.interaction.update(this.input);
       this.ui.update(this.clock,this.player,this.residents);
     }
@@ -107,10 +115,14 @@ async function begin() {
     if(!response.ok)throw new Error(`World profile unavailable (${response.status})`);
     const profile=await response.json();
     const terrainURL=new URL('../'+profile.terrainFile.replace(/^\.\//,''),import.meta.url);
-    const terrainResponse=await fetch(terrainURL);
+    const landcoverURL=new URL('../data/michigan-landcover.json',import.meta.url);
+    const [terrainResponse,landcoverResponse,foliageAssets]=await Promise.all([
+      fetch(terrainURL),fetch(landcoverURL).catch(()=>null),loadFoliageTextures()
+    ]);
     if(!terrainResponse.ok)throw new Error(`Elevation map unavailable (${terrainResponse.status})`);
     const elevation=await terrainResponse.json();
-    new Game(profile,elevation);
+    const landcover=landcoverResponse?.ok?await landcoverResponse.json():null;
+    new Game(profile,elevation,landcover,foliageAssets);
   } catch(error) {
     console.error('Sunward could not start',error);
     const node=document.getElementById('error');node.hidden=false;

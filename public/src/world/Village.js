@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createPlantRenderer} from './RealisticPlants.js';
 
 const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.84,...extra});
 
@@ -47,8 +48,10 @@ function labelSprite(text,scale=30) {
 }
 
 export class Village {
-  constructor(scene,terrain,profile) {
+  constructor(scene,terrain,profile,foliageAssets) {
     this.terrain=terrain;this.profile=profile;this.group=new THREE.Group();scene.add(this.group);
+    this.foliageAssets=foliageAssets;
+    this.shadeTrees=[];this.treeRenderers=[];
     this.blockers=[];this.decorations=[];
     const c=profile.village;
     this.places={
@@ -64,6 +67,7 @@ export class Village {
       cottages:{x:c.x+116,z:c.z+185}
     };
     this.build();
+    this.buildShadeTrees();
   }
 
   elevation(x,z) {return this.terrain.heightAt(x,z);}
@@ -191,32 +195,27 @@ export class Village {
   }
 
   shadeTree(x,z,scale=1) {
-    const y=this.elevation(x,z);
-    cylinder(this.group,.85*scale,1.3*scale,13*scale,
-      x,y+6.5*scale,z,mat('#8d755a'),9);
-    for(const side of [-1,1]){
-      const branch=cylinder(this.group,.24*scale,.48*scale,7*scale,
-        x+side*2.25*scale,y+11.5*scale,z+.25*scale,
-        mat('#93785d'),7);
-      branch.rotation.z=side*.63;
+    const species=['sugar-maple','red-oak','paper-birch','sugar-maple','white-pine','red-oak'];
+    const n=this.shadeTrees.length;
+    this.shadeTrees.push({
+      id:species[n%species.length],x,z,y:this.elevation(x,z),scale:scale*1.55,
+      rot:n*1.86,shade:.33+(n%3)*.2,shape:.28+(n%4)*.13
+    });
+  }
+
+  buildShadeTrees(){
+    const ids=new Set(this.shadeTrees.map(tree=>tree.id));
+    for(const id of ids){
+      const species=this.profile.species.find(s=>s.id===id);
+      const positions=this.shadeTrees.filter(tree=>tree.id===id);
+      this.treeRenderers.push(createPlantRenderer(this.group,species,positions,this.foliageAssets));
     }
-    const canopy=[
-      [0,17,0,6.2,'#76a666'],[-4.3,15.3,1,4.5,'#6d9a5c'],
-      [4.2,15.8,-1.4,4.75,'#90b777'],
-      [-1.6,19,2.2,4.05,'#98bf80'],
-      [2.2,18.1,3.1,4.15,'#79a968'],
-      [1.2,18,-4.1,4,'#638e57'],
-      [-1,21,.2,3.35,'#9ac283']
-    ];
-    for(const [dx,dy,dz,r,color] of canopy){
-      const mesh=new THREE.Mesh(
-        new THREE.IcosahedronGeometry(r*scale,1),
-        mat(color,{flatShading:true})
-      );
-      mesh.position.set(x+dx*scale,y+dy*scale,z+dz*scale);
-      mesh.castShadow=true;mesh.receiveShadow=true;
-      this.group.add(mesh);
-    }
+    this.update(this.profile.start);
+  }
+
+  update(playerPosition){
+    for(const renderer of this.treeRenderers)
+      renderer.update(playerPosition.x,playerPosition.z);
   }
 
   build() {
