@@ -32,6 +32,17 @@ jobs:
           node --check public/src/world/StonyTerrain.js
           node --check public/src/world/StonyTrails.js
           node --check public/src/world/StonyPlants.js
+      - name: Check first-person WebGL scene in Chrome
+        run: |
+          npm install --no-save playwright-core
+          node tools/smoke_browser.mjs
+      - name: Upload visual smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stony-creek-render
+          path: stony-creek-smoke.png
+          if-no-files-found: ignore
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

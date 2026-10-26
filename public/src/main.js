@@ -182,6 +182,7 @@ async function start(){
     const [dem,map]=await Promise.all([demResponse.json(),mapResponse.json()]);
     if(!dem.samples||!map.paths?.length)throw Error('Geographic data could not be verified.');
     new Explorer(dem,map,assets);
+    document.documentElement.dataset.stonyReady='true';
   }catch(error){
     console.error(error);
     const node=document.getElementById('error');
