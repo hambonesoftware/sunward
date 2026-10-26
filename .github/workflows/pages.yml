@@ -1,39 +1,42 @@
-name: Deploy Sunward to GitHub Pages
-
+name: Deploy Stony Creek Explorer
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
-
 jobs:
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Validate bundled game and Kenney assets
+      - name: Install terrain/image utilities
+        run: python -m pip install --disable-pip-version-check pillow
+      - name: Build Stony Creek real-world GIS data
+        run: python tools/build_stony_creek.py
+      - name: Validate terrain, mapped trails, game and modules
         run: |
+          node tools/validate_stony.mjs
           npm run validate
           node --check public/src/main.js
-          node --check public/src/world/KenneyPlants.js
-          node --check public/src/world/KenneyDecor.js
+          node --check public/src/world/StonyTerrain.js
+          node --check public/src/world/StonyTrails.js
+          node --check public/src/world/StonyPlants.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
-      - name: Upload static game
+      - name: Upload static explorer
         uses: actions/upload-pages-artifact@v3
         with:
           path: public

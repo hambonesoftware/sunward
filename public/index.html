@@ -1,70 +1,54 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="theme-color" content="#e9d8b0" />
-  <meta name="description" content="Sunward: Bayberry Cove, a joyful Michigan exploration adventure generated from real USGS elevation data." />
-  <title>Sunward — Bayberry Cove</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#14251e">
+  <meta name="description" content="Walk through an evolving three-dimensional Stony Creek Metropark explorer using real terrain and OpenStreetMap paths.">
+  <title>Stony Creek Explorer — Sunward</title>
+  <link rel="stylesheet" href="./styles.css">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
-  <div id="app">
-    <canvas id="world" aria-label="Three-dimensional exploration world"></canvas>
-    <div id="ambient-vignette"></div>
-
-    <header class="topbar">
-      <div class="place-label"><span class="tiny-emblem">✺</span><div><strong>BAYBERRY COVE</strong><small>WESTERN MICHIGAN · GREAT LAKES</small></div></div>
-      <div class="clock-card"><span class="sun-icon">☀</span><span id="clock">9:42 AM</span><button id="skip-time" title="Skip forward two game hours">+2h</button></div>
-    </header>
-
-    <section class="journal" aria-label="Current adventure">
-      <div class="eyebrow"><span class="tiny-glyph">✦</span> YOUR LITTLE ADVENTURE</div>
-      <strong id="quest-title">Meet June at the bakery</strong>
-      <p id="quest-description">Start by saying hello to a friendly local.</p>
-      <div class="journal-footer"><span id="residents-count">0 / 6 neighbors met</span><span id="plants-count">0 / 5 plants found</span></div>
-    </section>
-
-    <div class="bottom-left">
-      <div class="map-frame"><canvas id="mini-map" width="164" height="164" aria-label="Local map"></canvas><span class="map-n">N</span></div>
-      <div class="location-caption"><span>✦</span> Wandering is encouraged</div>
+<div id="app">
+  <canvas id="world" aria-label="First-person view of Stony Creek Metropark"></canvas>
+  <header class="topbar">
+    <div class="title-wrap"><span class="place-title">STONY CREEK</span><span class="place-subtitle">METROPARK · MICHIGAN</span></div>
+    <div class="top-actions">
+      <button id="map-button" class="quiet-button" aria-expanded="false" aria-controls="map-panel">Map</button>
+      <button id="pace-button" class="quiet-button" aria-pressed="false">Walk</button>
     </div>
-
-    <div class="bottom-right">
-      <div id="action-hint" class="action-hint" hidden><kbd>E</kbd><span id="action-text"></span></div>
-      <button id="action-button" class="game-button" hidden>Talk / Discover</button>
-      <button id="jump-button" class="jump-button" aria-label="Jump">↟</button>
+  </header>
+  <div class="crosshair" aria-hidden="true"></div>
+  <section id="map-panel" class="map-panel" hidden aria-label="Park navigation">
+    <div class="panel-top"><strong>Explore a location</strong><button id="map-close" aria-label="Close map">×</button></div>
+    <label for="destinations">Start walking near</label>
+    <select id="destinations">
+      <option value="nature">Nature Center</option>
+      <option value="eastwood">Eastwood Beach</option>
+      <option value="baypoint">Baypoint Beach</option>
+      <option value="shelden">Shelden Trails</option>
+      <option value="trolley">Trolley Trails</option>
+    </select>
+    <canvas id="park-map" width="296" height="310" aria-label="Outline of trails and lakes"></canvas>
+    <p class="data-note" id="data-source">Real elevation + OpenStreetMap paths; trees and structures are illustrative, not surveyed.</p>
+    <a href="https://www.metroparks.com/wp-content/uploads/2024/04/2024StonyCreekParkMap.pdf" target="_blank" rel="noopener noreferrer">Official Stony Creek park map ↗</a>
+    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+  </section>
+  <div class="location-pill" id="location-pill">Nature Center trails</div>
+  <div id="joystick" class="joystick" aria-label="Move around the park"><div class="joystick-thumb"></div></div>
+  <div class="help">Drag to look · WASD or thumbstick to walk · Shift to jog</div>
+  <section id="start-screen" class="start-screen">
+    <div class="intro">
+      <span class="intro-eyebrow">SUNWARD · REAL PLACES</span>
+      <h1>Walk through<br><em>Stony Creek.</em></h1>
+      <p>Explore the real contours and mapped trails of Stony Creek Metropark, Oakland and Macomb counties, Michigan. Just walk. No quests, no goals.</p>
+      <button id="start-button" disabled>Loading park landscape…</button>
+      <small>Geographic prototype · not yet a photographic or structure-accurate digital twin.</small>
     </div>
-
-    <div id="joystick" class="joystick" aria-label="Movement control"><div class="joystick-thumb"></div></div>
-    <p class="desktop-help">WASD / arrows to walk &nbsp;·&nbsp; Drag to look &nbsp;·&nbsp; Space to jump &nbsp;·&nbsp; E to talk &nbsp;·&nbsp; Shift to run</p>
-
-    <div id="dialog" class="dialog-backdrop" hidden>
-      <section class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-        <div id="dialog-eyebrow" class="eyebrow">A FRIENDLY FACE</div>
-        <h2 id="dialog-title">Hello!</h2>
-        <p id="dialog-text"></p>
-        <button id="dialog-close" class="primary-button">Keep exploring <span>→</span></button>
-      </section>
-    </div>
-
-    <div id="start-screen" class="start-screen">
-      <div class="start-pattern"></div>
-      <div class="start-card">
-        <div class="start-kicker"><span class="sunburst">✳</span> A SMALL PLACE IN A VERY BIG COUNTRY</div>
-        <h1>SUNWARD<span class="mark">.</span></h1>
-        <div class="handwritten">The Bayberry Cove chapter</div>
-        <p>Real Michigan hills. Great Lakes wildflowers. Neighbors who know your name. No hurry to get anywhere.</p>
-        <div class="divider-ornament">✿ &nbsp; ✿ &nbsp; ✿</div>
-        <button id="start-button" class="primary-button" disabled>Preparing the lakeshore…</button>
-        <p class="source-note">Real terrain · An imaginary village · A hand-built little adventure</p>
-      </div>
-    </div>
-
-    <div id="toast" class="toast" hidden></div>
-    <div id="error" class="error-banner" hidden></div>
-  </div>
-  <script type="module" src="./src/main.js"></script>
+  </section>
+  <div id="error" class="error" hidden></div>
+</div>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>

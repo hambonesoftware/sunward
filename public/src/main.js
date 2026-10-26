@@ -1,138 +1,192 @@
 import * as THREE from 'three';
-import {EventBus} from './engine/EventBus.js';
 import {Input} from './engine/Input.js';
-import {WorldClock} from './systems/WorldClock.js';
-import {QuestJournal} from './systems/QuestJournal.js';
-import {Interaction} from './systems/Interaction.js';
-import {Terrain} from './world/Terrain.js';
-import {Vegetation} from './world/Vegetation.js';
-import {GroundCover} from './world/GroundCover.js';
-import {KenneyDecor} from './world/KenneyDecor.js';
+import {StonyTerrain,project} from './world/StonyTerrain.js';
+import {StonyTrails} from './world/StonyTrails.js';
+import {StonyPlants} from './world/StonyPlants.js';
 import {loadKenneyNatureAssets} from './world/KenneyPlants.js';
-import {Village} from './world/Village.js';
-import {Water,Atmosphere} from './world/Atmosphere.js';
-import {Player} from './actors/Player.js';
-import {Residents} from './actors/Residents.js';
-import {HUD} from './ui/HUD.js';
 
-class Game {
-  constructor(profile,dem,landcover,foliageAssets) {
-    this.profile=profile;
-    this.events=new EventBus();
-    this.running=false;
-    this.scene=new THREE.Scene();
-    this.clock=new WorldClock(this.events);
-    this.journal=new QuestJournal(this.events);
+// Publicly documented or referenced approximate access points, not building footprints.
+const PLACES={
+  nature:{label:'Nature Center trails',lat:42.76078,lon:-83.0745},
+  eastwood:{label:'Eastwood Beach',lat:42.722,lon:-83.078},
+  baypoint:{label:'Baypoint Beach',lat:42.7284,lon:-83.09064},
+  shelden:{label:'Shelden Trails',lat:42.73046,lon:-83.1072},
+  trolley:{label:'Trolley Trails',lat:42.71823,lon:-83.079}
+};
+const clamp=THREE.MathUtils.clamp;
+
+class Explorer{
+  constructor(dem,map,assets){
     this.canvas=document.getElementById('world');
-    this.renderer=new THREE.WebGLRenderer({canvas:this.canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.65));
+    this.renderer=new THREE.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio||1,matchMedia('(pointer:coarse)').matches?1.4:1.8));
     this.renderer.setSize(innerWidth,innerHeight);
+    this.renderer.outputColorSpace=THREE.SRGBColorSpace;
+    this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure=1.16;
     this.renderer.shadowMap.enabled=true;
     this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure=1.19;
-    this.camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.5,2200);
-    this.terrain=new Terrain(this.scene,dem,profile);
-    this.water=new Water(this.scene,this.terrain);
-    this.village=new Village(this.scene,this.terrain,profile,foliageAssets);
-    this.vegetation=new Vegetation(this.scene,this.terrain,profile,landcover,foliageAssets);
-    this.groundCover=new GroundCover(this.scene,this.terrain,this.village,profile,landcover,foliageAssets);
-    this.foundModels=new KenneyDecor(this.scene,this.terrain,this.village,landcover,foliageAssets);
-    this.atmosphere=new Atmosphere(this.scene,this.terrain);
-    this.player=new Player(this.scene,this.terrain,this.village,profile.start);
-    this.residents=new Residents(this.scene,this.terrain,this.village,profile,this.clock);
-    this.ui=new HUD(this.events,profile,this.terrain,this.journal);
-    this.input=new Input(this.canvas,document.getElementById('joystick'),document.getElementById('action-button'),document.getElementById('jump-button'));
-    this.interaction=new Interaction(this.player,this.residents,this.vegetation,this.journal,this.ui,this.events);
-    this.journal.applySavedSpecimens(this.vegetation.specimens);
-    this.heading=0;
-    this.pitch=.22;
-    this.elapsed=0;
-    this.lastFrame=0;
-    this.events.on('skip-time',()=>{this.clock.skip(2);this.ui.toast('Two peaceful hours drift by…');});
-    this.events.on('game-started',()=>{this.running=true;this.ui.toast('Welcome! Find June at the bakery.');});
-    this.events.on('dialog-closed',()=>this.input.consumeInteract());
-    window.addEventListener('resize',()=>this.resize());
-    this.camera.position.set(this.player.position.x+15,this.player.position.y+40,this.player.position.z+55);
-    this.camera.lookAt(this.player.position.x,this.player.position.y+12,this.player.position.z);
-    this.ui.ready();
+    this.scene=new THREE.Scene();
+    this.scene.background=new THREE.Color('#a5c8d3');
+    this.scene.fog=new THREE.FogExp2('#b3c8bf',.001);
+    this.scene.add(new THREE.HemisphereLight('#f5f8e9','#6e806a',2.1));
+    this.sun=new THREE.DirectionalLight('#fff1d6',2.55);
+    this.sun.castShadow=true;
+    this.sun.shadow.mapSize.set(1024,1024);
+    this.sun.shadow.camera.left=-100;
+    this.sun.shadow.camera.right=100;
+    this.sun.shadow.camera.top=100;
+    this.sun.shadow.camera.bottom=-100;
+    this.sun.shadow.camera.near=1;
+    this.sun.shadow.camera.far=480;
+    this.scene.add(this.sun,this.sun.target);
+    this.terrain=new StonyTerrain(this.scene,dem,map);
+    this.trails=new StonyTrails(this.scene,this.terrain,map);
+    this.camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.08,1250);
+    this.position=new THREE.Vector3();
+    this.heading=0;this.pitch=0;this.running=false;this.jog=false;
+    this.input=new Input(this.canvas,document.getElementById('joystick'),null,null);
+    this.goTo('nature');
+    this.plants=new StonyPlants(this.scene,this.terrain,this.trails,map,assets,this.position);
+    this.map=map;this.elapsed=0;this.last=0;
+    this.startButton=document.getElementById('start-button');
+    this.startButton.disabled=false;
+    this.startButton.textContent='Enter Stony Creek';
+    this.startButton.addEventListener('click',()=>{
+      document.getElementById('start-screen').hidden=true;
+      document.getElementById('start-screen').style.display='none';
+      this.running=true;
+    });
+    const mapButton=document.getElementById('map-button'),
+      panel=document.getElementById('map-panel');
+    const toggle=visible=>{
+      panel.hidden=!visible;
+      mapButton.setAttribute('aria-expanded',String(visible));
+      if(visible)this.drawMap();
+    };
+    mapButton.addEventListener('click',()=>toggle(panel.hidden));
+    document.getElementById('map-close').addEventListener('click',()=>toggle(false));
+    document.getElementById('destinations').addEventListener('change',event=>{
+      this.goTo(event.target.value);
+      this.plants.update(this.position);
+      this.drawMap();
+      toggle(false);
+    });
+    const pace=document.getElementById('pace-button');
+    pace.addEventListener('click',()=>{
+      this.jog=!this.jog;
+      pace.textContent=this.jog?'Jog':'Walk';
+      pace.setAttribute('aria-pressed',String(this.jog));
+    });
+    addEventListener('resize',()=>this.resize());
     requestAnimationFrame(t=>this.frame(t));
   }
-
-  resize() {
-    this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();
+  goTo(name){
+    const destination=PLACES[name]||PLACES.nature;
+    let p=project(destination.lon,destination.lat,this.terrain.bounds);
+    p=this.nearestPath(p,200)||p;
+    this.position.set(p.x,this.terrain.surfaceAt(p.x,p.z)+1.75,p.z);
+    this.heading=0;this.pitch=-.02;
+    this.camera?.position.copy(this.position);
+    const label=document.getElementById('location-pill');
+    label.textContent=destination.label;
+  }
+  nearestPath(p,limit){
+    let best=null,dist=limit;
+    for(const line of this.trails.lines){
+      for(let i=1;i<line.points.length;i++){
+        const a=line.points[i-1],b=line.points[i],dx=b.x-a.x,dz=b.z-a.z;
+        const t=clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1),0,1);
+        const x=a.x+t*dx,z=a.z+t*dz;
+        const d=Math.hypot(x-p.x,z-p.z);
+        if(d<dist){best={x,z};dist=d;}
+      }
+    }
+    return best;
+  }
+  drawMap(){
+    const canvas=document.getElementById('park-map');
+    const ctx=canvas.getContext('2d');
+    const w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='#b5c6a3';ctx.fillRect(0,0,w,h);
+    const point=p=>[w*(p.x/this.terrain.width+.5),h*(p.z/this.terrain.depth+.5)];
+    ctx.fillStyle='#789eae';
+    for(const lake of this.terrain.water){
+      ctx.beginPath();
+      lake.points.forEach((p,i)=>{
+        const [x,y]=point(p);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.closePath();ctx.fill();
+    }
+    for(const line of this.trails.lines){
+      ctx.beginPath();
+      line.points.forEach((p,i)=>{
+        const [x,y]=point(p);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.strokeStyle=line.kind==='cycleway'?'#b7a580':'#ede1c5';
+      ctx.lineWidth=line.kind==='cycleway'?1.9:.75;
+      ctx.stroke();
+    }
+    const [x,y]=point(this.position);
+    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle='#174e35';ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.strokeStyle='#f9f9f2';ctx.lineWidth=2;ctx.stroke();
+    ctx.font='bold 12px system-ui';ctx.fillStyle='#254a35';ctx.fillText('N',w-21,18);
+  }
+  resize(){
+    this.camera.aspect=innerWidth/innerHeight;
+    this.camera.updateProjectionMatrix();
     this.renderer.setSize(innerWidth,innerHeight);
   }
-
-  updateCamera(dt) {
-    const look=this.input.consumeLook();
-    if(this.running&&this.ui.dialog.hidden){
-      this.heading-=look.x*.0044;
-      this.pitch=THREE.MathUtils.clamp(this.pitch+look.y*.0035,-.15,.82);
+  frame(timestamp){
+    const dt=Math.min(.05,(timestamp-this.last)/1000||0);
+    this.last=timestamp;this.elapsed+=dt;
+    if(this.running){
+      const look=this.input.consumeLook();
+      this.heading-=look.x*.003;
+      this.pitch=clamp(this.pitch-look.y*.0028,-1.45,1.45);
+      const move=this.input.moveAxis();
+      const walk=this.jog||this.input.sprinting()?3.9:1.85;
+      const dx=(move.x*Math.cos(this.heading)+move.y*Math.sin(this.heading))*walk*dt;
+      const dz=(move.x*Math.sin(this.heading)-move.y*Math.cos(this.heading))*walk*dt;
+      const nx=this.position.x+dx,nz=this.position.z+dz;
+      const oldGround=this.terrain.surfaceAt(this.position.x,this.position.z);
+      if(this.terrain.positionInBounds(nx,nz,10)&&
+          !this.terrain.waterAt(nx,nz)&&
+          Math.abs(this.terrain.surfaceAt(nx,nz)-oldGround)<.8){
+        this.position.x=nx;this.position.z=nz;
+      }
+      const eye=this.terrain.surfaceAt(this.position.x,this.position.z)+1.72;
+      this.position.y=THREE.MathUtils.lerp(this.position.y,eye,Math.min(dt*9,1));
+      this.camera.position.copy(this.position);
+      this.camera.rotation.order='YXZ';
+      this.camera.rotation.y=this.heading;
+      this.camera.rotation.x=this.pitch;
+      this.plants.update(this.position);
+      this.sun.position.set(this.position.x-120,this.position.y+170,this.position.z-100);
+      this.sun.target.position.copy(this.position);this.sun.target.position.y=this.position.y-2;
+      this.sun.target.updateMatrixWorld();
     }
-    const focus=this.player.position.clone().add(new THREE.Vector3(0,12,0));
-    const distance=64;
-    const horizontal=Math.cos(this.pitch)*distance;
-    const target=new THREE.Vector3(
-      focus.x+Math.sin(this.heading)*horizontal,
-      focus.y+Math.sin(this.pitch)*distance+20,
-      focus.z+Math.cos(this.heading)*horizontal
-    );
-    target.x=THREE.MathUtils.clamp(target.x,-this.terrain.width/2+10,this.terrain.width/2-10);
-    target.z=THREE.MathUtils.clamp(target.z,-this.terrain.depth/2+10,this.terrain.depth/2-10);
-    target.y=Math.max(target.y,this.terrain.heightAt(target.x,target.z)+17);
-    this.camera.position.lerp(target,Math.min(dt*5.8,1));
-    this.camera.lookAt(focus);
-  }
-
-  frame(timestamp) {
-    const dt=Math.min((timestamp-this.lastFrame)/1000||0,.05);
-    this.lastFrame=timestamp;
-    this.elapsed+=dt;
-    if(this.running) {
-      this.clock.update(dt);
-      this.player.update(dt,this.input,this.heading,this.ui.dialog.hidden);
-      this.village.update(this.player.position);
-      this.residents.update(dt,this.elapsed);
-      this.vegetation.update(dt,this.elapsed,this.player.position);
-      this.groundCover.update(this.player.position);
-      this.foundModels.update(this.player.position);
-      if(this.ui.dialog.hidden)this.interaction.update(this.input);
-      this.ui.update(this.clock,this.player,this.residents);
-    }
-    this.atmosphere.update(dt,this.elapsed,this.clock.hours,this.player);
-    this.water.update(this.elapsed);
-    this.updateCamera(dt);
     this.renderer.render(this.scene,this.camera);
     requestAnimationFrame(t=>this.frame(t));
   }
 }
-
-async function begin() {
-  try {
-    const worldURL=new URL('../data/michigan-world.json',import.meta.url);
-    const response=await fetch(worldURL);
-    if(!response.ok)throw new Error(`World profile unavailable (${response.status})`);
-    const profile=await response.json();
-    const terrainURL=new URL('../'+profile.terrainFile.replace(/^\.\//,''),import.meta.url);
-    const landcoverURL=new URL('../data/michigan-landcover.json',import.meta.url);
-    const [terrainResponse,landcoverResponse,foliageAssets]=await Promise.all([
-      fetch(terrainURL),fetch(landcoverURL).catch(()=>null),loadKenneyNatureAssets()
+async function start(){
+  try{
+    const [demResponse,mapResponse,assets]=await Promise.all([
+      fetch(new URL('../data/stony-creek-dem.json',import.meta.url)),
+      fetch(new URL('../data/stony-creek-map.json',import.meta.url)),
+      loadKenneyNatureAssets()
     ]);
-    if(!terrainResponse.ok)throw new Error(`Elevation map unavailable (${terrainResponse.status})`);
-    const elevation=await terrainResponse.json();
-    const landcover=landcoverResponse?.ok?await landcoverResponse.json():null;
-    new Game(profile,elevation,landcover,foliageAssets);
-  } catch(error) {
-    console.error('Sunward could not start',error);
-    const node=document.getElementById('error');node.hidden=false;
-    const noWebGL=/WebGL context/i.test(error.message);
-    node.textContent=noWebGL
-      ?'This browser cannot create a 3D graphics context. Please open Sunward in Safari or Chrome on a device with WebGL enabled (or enable browser hardware acceleration).'
-      :`We could not load Bayberry Cove: ${error.message}. Check your network connection, refresh, and use an HTTP server if opening local files.`;
-    const button=document.getElementById('start-button');
-    button.textContent=noWebGL?'3D graphics unavailable':'Could not load game';
+    if(!demResponse.ok||!mapResponse.ok)
+      throw Error('The actual Stony Creek terrain/trail data is missing from this deployment.');
+    const [dem,map]=await Promise.all([demResponse.json(),mapResponse.json()]);
+    if(!dem.samples||!map.paths?.length)throw Error('Geographic data could not be verified.');
+    new Explorer(dem,map,assets);
+  }catch(error){
+    console.error(error);
+    const node=document.getElementById('error');
+    node.hidden=false;node.textContent='Stony Creek could not initialize: '+error.message;
+    document.getElementById('start-button').textContent='Park data unavailable';
   }
 }
-
-begin();
+start();
