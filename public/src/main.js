@@ -126,8 +126,12 @@ async function begin() {
   } catch(error) {
     console.error('Sunward could not start',error);
     const node=document.getElementById('error');node.hidden=false;
-    node.textContent=`We could not load Bayberry Cove: ${error.message}. Run this game through an HTTP server (not file://) and refresh.`;
-    const button=document.getElementById('start-button');button.textContent='Could not load game';
+    const noWebGL=/WebGL context/i.test(error.message);
+    node.textContent=noWebGL
+      ?'This browser cannot create a 3D graphics context. Please open Sunward in Safari or Chrome on a device with WebGL enabled (or enable browser hardware acceleration).'
+      :`We could not load Bayberry Cove: ${error.message}. Check your network connection, refresh, and use an HTTP server if opening local files.`;
+    const button=document.getElementById('start-button');
+    button.textContent=noWebGL?'3D graphics unavailable':'Could not load game';
   }
 }
 
