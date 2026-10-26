@@ -32,6 +32,12 @@ jobs:
           node --check public/src/world/StonyTerrain.js
           node --check public/src/world/StonyTrails.js
           node --check public/src/world/StonyPlants.js
+          node --check public/src/world/StonyBiomeRules.js
+          node --check public/src/world/StonyLOD.js
+          node --check public/src/world/StonyTreeLibrary.js
+          node --check public/src/world/StonyFoliagePass2.js
+          node --check public/src/world/StonyUnderstory.js
+          node --check public/src/world/StonyGroundCover.js
       - name: Check first-person WebGL scene in Chrome
         run: |
           npm install --no-save playwright-core

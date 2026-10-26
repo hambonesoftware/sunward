@@ -35,3 +35,20 @@ Every Pages deployment runs `python tools/build_stony_creek.py` to assemble:
 - `tools/validate_stony.mjs`: truthfulness and integrity checks for published geography.
 
 The historical Bayberry Cove source/data remains in the repository for potential reuse, but it **is not invoked by this explorer build**. This is a GitHub Pages static site with no backend, server-side tracking or sign-in.
+
+## Foliage Pass 2 — near-realistic branches and habitat-driven placement
+
+The active explorer now uses a modular foliage orchestration layer and reuses the
+project's maple, oak, pine, birch and bark texture maps for smaller, more natural
+close-range branches. Distant and middle-distance forest models remain self-hosted,
+CC0 Kenney stand-ins for mobile performance. New ground-layer soil/litter decals,
+nearby grass and different vegetation densities per park area improve depth.
+
+See **[A: architecture and B: exact asset/placement spec](docs/stony-foliage-pass2.md)**,
+plus the runtime [zone rules](public/data/stony-foliage-zones.json) and
+[asset inventory](public/data/stony-foliage-assets.json).
+
+The near-range tree mesh is generated procedural artwork and is **not** an
+uploaded photogrammetric model. Detailed Poly Haven source models are
+**candidates**, not downloaded assets. Existing routes and USGS DEM remain.
+All quests, goals, dialogue and village rendering stay disabled.

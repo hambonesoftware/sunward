@@ -134,13 +134,14 @@ export async function loadKenneyNatureAssets() {
 // A single model renderer batches each sub-mesh with InstancedMesh and does
 // player-relative distance culling; nothing is allocated every animation frame.
 export function createKenneyModelRenderer(group,modelID,positions,assets,{
-  species=null,height=4,maxDistance=220
+  species=null,height=4,maxDistance=220,minDistance=0,maxVisible=Infinity
 }={}) {
   const model=assets.models.get(modelID);
   if(!model||!positions.length)return null;
+  const capacity=Math.max(1,Math.min(positions.length,maxVisible));
   const meshes=model.parts.map(({geometry,material})=>{
     const mesh=new THREE.InstancedMesh(
-      geometry,materialFor(material,species,modelID),positions.length
+      geometry,materialFor(material,species,modelID),capacity
     );
     mesh.count=0;
     mesh.frustumCulled=false;
@@ -152,15 +153,22 @@ export function createKenneyModelRenderer(group,modelID,positions,assets,{
   const dummy=new THREE.Object3D();
   const tint=new THREE.Color();
   let lastX=Infinity,lastZ=Infinity;
-  const radiusSq=maxDistance*maxDistance;
+  const radiusSq=maxDistance*maxDistance,minSq=minDistance*minDistance;
   return {
     update(cameraX,cameraZ,force=false) {
       if(!force&&Math.hypot(cameraX-lastX,cameraZ-lastZ)<10)return;
       lastX=cameraX;lastZ=cameraZ;
       let visible=0;
-      for(const p of positions) {
+      // Nearest-first selection guarantees that the bounded GPU buffer always
+      // contains relevant trees rather than the earliest random coordinates.
+      const candidates=[];
+      for(const p of positions){
         const dx=p.x-cameraX,dz=p.z-cameraZ;
-        if(dx*dx+dz*dz>radiusSq)continue;
+        const d2=dx*dx+dz*dz;
+        if(d2>=minSq&&d2<=radiusSq)candidates.push({p,d2});
+      }
+      candidates.sort((a,b)=>a.d2-b.d2);
+      for(const {p} of candidates.slice(0,capacity)) {
         const factor=(height/model.height)*(p.scale??1);
         const rot=p.rot||0;
         const cos=Math.cos(rot),sin=Math.sin(rot);

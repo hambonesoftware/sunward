@@ -1,0 +1,154 @@
+{
+  "version": 2,
+  "provenance": "asset readiness is explicit; candidates are NOT downloaded into the runtime",
+  "live": [
+    {
+      "id": "foliage-maple",
+      "file": "assets/foliage/maple.webp",
+      "role": "near leaf spray map",
+      "license": "project-created"
+    },
+    {
+      "id": "foliage-oak",
+      "file": "assets/foliage/oak.webp",
+      "role": "near leaf spray map",
+      "license": "project-created"
+    },
+    {
+      "id": "foliage-birch",
+      "file": "assets/foliage/birch.webp",
+      "role": "near leaf spray map",
+      "license": "project-created"
+    },
+    {
+      "id": "foliage-pine",
+      "file": "assets/foliage/pine.webp",
+      "role": "near needle spray map",
+      "license": "project-created"
+    },
+    {
+      "id": "foliage-bark",
+      "file": "assets/foliage/bark.webp",
+      "role": "near bark texture",
+      "license": "project-created"
+    },
+    {
+      "id": "tree_detailed",
+      "file": "assets/kenney/tree_detailed.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_simple",
+      "file": "assets/kenney/tree_simple.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_pineTallB_detailed",
+      "file": "assets/kenney/tree_pineTallB_detailed.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_pineTallC_detailed",
+      "file": "assets/kenney/tree_pineTallC_detailed.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_pineDefaultB",
+      "file": "assets/kenney/tree_pineDefaultB.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_pineSmallC",
+      "file": "assets/kenney/tree_pineSmallC.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "tree_pineRoundB",
+      "file": "assets/kenney/tree_pineRoundB.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "plant_bushDetailed",
+      "file": "assets/kenney/plant_bushDetailed.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "plant_flatShort",
+      "file": "assets/kenney/plant_flatShort.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "flower_yellowC",
+      "file": "assets/kenney/flower_yellowC.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "flower_purpleA",
+      "file": "assets/kenney/flower_purpleA.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "rock_smallF",
+      "file": "assets/kenney/rock_smallF.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    },
+    {
+      "id": "mushroom_tan",
+      "file": "assets/kenney/mushroom_tan.glb",
+      "role": "background tree or understory proxy",
+      "license": "CC0-1.0",
+      "source": "https://kenney.nl/assets/nature-kit"
+    }
+  ],
+  "futureCandidates": [
+    {
+      "id": "polyhaven-pine-tree-01",
+      "source": "https://polyhaven.com/a/pine_tree_01",
+      "license": "CC0",
+      "originalTrianglesApprox": 17000000,
+      "workRequired": "retopology; atlas; pine leaf/needle cards; 3 LOD tiers; verify shape before use",
+      "status": "not integrated"
+    },
+    {
+      "id": "polyhaven-tree-small-02",
+      "source": "https://polyhaven.com/a/tree_small_02",
+      "license": "CC0",
+      "originalTrianglesApprox": 5000000,
+      "workRequired": "re-interpret as structural reference, not Michigan species identification; mobile reduction",
+      "status": "not integrated"
+    }
+  ],
+  "acceptance": {
+    "heroMaxTrianglesPerTree": 15000,
+    "heroMaxTextureEdge": 1024,
+    "midMaxTrianglesPerTree": 2500,
+    "farMaxTrianglesPerTree": 350,
+    "maxTextureBudgetMBMobile": 40,
+    "aesthetic": "Natural canopy silhouette, healthy trunk and crown; no cards wider than 2.2 m per branch cluster",
+    "botanicalPrecision": "Stylized procedural crowns and stock models are not authoritative representations of Michigan species"
+  }
+}

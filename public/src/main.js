@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import {Input} from './engine/Input.js';
 import {StonyTerrain,project} from './world/StonyTerrain.js';
 import {StonyTrails} from './world/StonyTrails.js';
-import {StonyPlants} from './world/StonyPlants.js';
+import {StonyFoliagePass2} from './world/StonyFoliagePass2.js';
 import {loadKenneyNatureAssets} from './world/KenneyPlants.js';
+import {loadFoliageTextures} from './world/FoliageTextures.js';
 
 // Publicly documented or referenced approximate access points, not building footprints.
 const PLACES={
@@ -16,7 +17,7 @@ const PLACES={
 const clamp=THREE.MathUtils.clamp;
 
 class Explorer{
-  constructor(dem,map,assets){
+  constructor(dem,map,assets,zones){
     this.canvas=document.getElementById('world');
     this.renderer=new THREE.WebGLRenderer({canvas:this.canvas,antialias:true,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(devicePixelRatio||1,matchMedia('(pointer:coarse)').matches?1.4:1.8));
@@ -47,7 +48,8 @@ class Explorer{
     this.heading=0;this.pitch=0;this.running=false;this.jog=false;
     this.input=new Input(this.canvas,document.getElementById('joystick'),null,null);
     this.goTo('nature');
-    this.plants=new StonyPlants(this.scene,this.terrain,this.trails,map,assets,this.position);
+    this.plants=new StonyFoliagePass2(this.scene,this.terrain,this.trails,map,assets,zones,this.position);
+    this.foliageAssets=assets;
     this.map=map;this.elapsed=0;this.last=0;
     this.startButton=document.getElementById('start-button');
     this.startButton.disabled=false;
@@ -161,6 +163,7 @@ class Explorer{
       this.camera.rotation.order='YXZ';
       this.camera.rotation.y=this.heading;
       this.camera.rotation.x=this.pitch;
+      this.foliageAssets.setWindTime(this.elapsed);
       this.plants.update(this.position);
       this.sun.position.set(this.position.x-120,this.position.y+170,this.position.z-100);
       this.sun.target.position.copy(this.position);this.sun.target.position.y=this.position.y-2;
@@ -172,16 +175,19 @@ class Explorer{
 }
 async function start(){
   try{
-    const [demResponse,mapResponse,assets]=await Promise.all([
+    const [demResponse,mapResponse,zonesResponse,kenneyAssets,textureAssets]=await Promise.all([
       fetch(new URL('../data/stony-creek-dem.json',import.meta.url)),
       fetch(new URL('../data/stony-creek-map.json',import.meta.url)),
-      loadKenneyNatureAssets()
+      fetch(new URL('../data/stony-foliage-zones.json',import.meta.url)),
+      loadKenneyNatureAssets(),
+      loadFoliageTextures()
     ]);
-    if(!demResponse.ok||!mapResponse.ok)
+    if(!demResponse.ok||!mapResponse.ok||!zonesResponse.ok)
       throw Error('The actual Stony Creek terrain/trail data is missing from this deployment.');
-    const [dem,map]=await Promise.all([demResponse.json(),mapResponse.json()]);
+    const [dem,map,zones]=await Promise.all([demResponse.json(),mapResponse.json(),zonesResponse.json()]);
+    const assets={...kenneyAssets,...textureAssets,grassMaterial:kenneyAssets.grassMaterial};
     if(!dem.samples||!map.paths?.length)throw Error('Geographic data could not be verified.');
-    new Explorer(dem,map,assets);
+    new Explorer(dem,map,assets,zones);
     document.documentElement.dataset.stonyReady='true';
   }catch(error){
     console.error(error);
