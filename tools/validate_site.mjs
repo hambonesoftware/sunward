@@ -38,6 +38,30 @@ for(const name of ['maple','pine','oak','birch','bark']){
   const file=await stat(join(publicRoot,`assets/foliage/${name}.webp`));
   assert(file.size>10000,`Missing realistic foliage texture: ${name}`);
 }
+
+const kenney=JSON.parse(await readFile(join(publicRoot,'data/kenney-nature.json'),'utf8'));
+assert.equal(kenney.license,'CC0-1.0');
+assert(kenney.models.length>=13,'Expected core self-hosted Kenney models');
+const decoder=new TextDecoder('utf-8');
+for(const id of kenney.models){
+  const bytes=await readFile(join(publicRoot,'assets/kenney',id+'.glb'));
+  assert.equal(bytes.toString('ascii',0,4),'glTF','Invalid Kenney GLB: '+id);
+  assert.equal(bytes.readUInt32LE(4),2,'Invalid glTF version: '+id);
+  assert.equal(bytes.readUInt32LE(8),bytes.length,'Truncated Kenney GLB: '+id);
+  assert.equal(bytes.toString('ascii',16,20),'JSON','Missing GLB JSON: '+id);
+  const jsonLength=bytes.readUInt32LE(12);
+  const gltf=JSON.parse(decoder.decode(bytes.subarray(20,20+jsonLength)));
+  assert(gltf.meshes?.length>0,'Missing Kenney geometry: '+id);
+  if(id.startsWith('tree_')){
+    const materials=(gltf.materials||[]).map(m=>(m.name||'').toLowerCase());
+    assert(materials.some(name=>/leaf|grass|green/.test(name)),'Tree has no leafy canopy: '+id);
+    assert(materials.some(name=>/wood|bark/.test(name)),'Tree has no modeled trunk: '+id);
+  }
+}
+const mainSource=await readFile(join(publicRoot,'src/main.js'),'utf8');
+assert(mainSource.includes('loadKenneyNatureAssets'),'Kenney library not wired to composition root');
+assert(!mainSource.includes('new FoundModels('),'Old mismatched model layer still active');
+
 for(const resident of profile.residents){
   assert(resident.schedule.length>=4,`Schedule missing for ${resident.name}`);
   assert(resident.schedule.every(s=>s.hour>=0&&s.hour<24),`Invalid hour for ${resident.name}`);
@@ -73,10 +97,10 @@ await stat(join(publicRoot,'vendor/three-addons/utils/BufferGeometryUtils.js'));
 const server=startServer(0);
 await new Promise(resolveReady=>server.once('listening',resolveReady));
 try{
-  for(const path of ['/','/styles.css','/src/main.js','/data/michigan-dem.json','/data/michigan-landcover.json','/data/model-library.json','/assets/models/oak-mature.glb','/assets/models/fern-lady.glb','/assets/foliage/maple.webp','/vendor/three.module.js','/vendor/three.core.js','/vendor/three-addons/loaders/GLTFLoader.js']){
+  for(const path of ['/','/styles.css','/src/main.js','/data/michigan-dem.json','/data/michigan-landcover.json','/data/model-library.json','/assets/kenney/tree_detailed.glb','/assets/kenney/tree_pineTallB_detailed.glb','/assets/models/oak-mature.glb','/assets/models/fern-lady.glb','/assets/foliage/maple.webp','/vendor/three.module.js','/vendor/three.core.js','/vendor/three-addons/loaders/GLTFLoader.js']){
     const response=await fetch(`http://127.0.0.1:${server.address().port}${path}`);
     assert.equal(response.status,200,`${path} failed HTTP check`);
   }
 }finally{server.close();}
 
-console.log(`Validated: ${modules.length} ES modules, real USGS ${data.width}×${data.height} DEM (${data.minimum}–${data.maximum}m), ${landcover.width}×${landcover.height} USGS NLCD grid, ${library.models.length} CC0 GLB assets, five optimized leaf/bark textures, ${profile.species.length} regional species, ${profile.residents.length} scheduled residents, 12 HTTP asset routes.`);
+console.log(`Validated: ${modules.length} ES modules, real USGS ${data.width}×${data.height} DEM (${data.minimum}–${data.maximum}m), ${landcover.width}×${landcover.height} USGS NLCD grid, ${library.models.length} CC0 GLB assets, five preserved leaf/bark textures, ${kenney.models.length} active Kenney GLBs, ${profile.species.length} regional species, ${profile.residents.length} scheduled residents, 12 HTTP asset routes.`);

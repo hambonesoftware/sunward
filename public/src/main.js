@@ -7,8 +7,8 @@ import {Interaction} from './systems/Interaction.js';
 import {Terrain} from './world/Terrain.js';
 import {Vegetation} from './world/Vegetation.js';
 import {GroundCover} from './world/GroundCover.js';
-import {FoundModels} from './world/FoundModels.js';
-import {loadFoliageTextures} from './world/FoliageTextures.js';
+import {KenneyDecor} from './world/KenneyDecor.js';
+import {loadKenneyNatureAssets} from './world/KenneyPlants.js';
 import {Village} from './world/Village.js';
 import {Water,Atmosphere} from './world/Atmosphere.js';
 import {Player} from './actors/Player.js';
@@ -30,14 +30,14 @@ class Game {
     this.renderer.shadowMap.enabled=true;
     this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure=1.4;
+    this.renderer.toneMappingExposure=1.19;
     this.camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.5,2200);
     this.terrain=new Terrain(this.scene,dem,profile);
     this.water=new Water(this.scene,this.terrain);
     this.village=new Village(this.scene,this.terrain,profile,foliageAssets);
     this.vegetation=new Vegetation(this.scene,this.terrain,profile,landcover,foliageAssets);
     this.groundCover=new GroundCover(this.scene,this.terrain,this.village,profile,landcover,foliageAssets);
-    this.foundModels=new FoundModels(this.scene,this.terrain,this.village,landcover);
+    this.foundModels=new KenneyDecor(this.scene,this.terrain,this.village,landcover,foliageAssets);
     this.atmosphere=new Atmosphere(this.scene,this.terrain);
     this.player=new Player(this.scene,this.terrain,this.village,profile.start);
     this.residents=new Residents(this.scene,this.terrain,this.village,profile,this.clock);
@@ -117,7 +117,7 @@ async function begin() {
     const terrainURL=new URL('../'+profile.terrainFile.replace(/^\.\//,''),import.meta.url);
     const landcoverURL=new URL('../data/michigan-landcover.json',import.meta.url);
     const [terrainResponse,landcoverResponse,foliageAssets]=await Promise.all([
-      fetch(terrainURL),fetch(landcoverURL).catch(()=>null),loadFoliageTextures()
+      fetch(terrainURL),fetch(landcoverURL).catch(()=>null),loadKenneyNatureAssets()
     ]);
     if(!terrainResponse.ok)throw new Error(`Elevation map unavailable (${terrainResponse.status})`);
     const elevation=await terrainResponse.json();

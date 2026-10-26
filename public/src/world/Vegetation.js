@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {HabitatMap} from './HabitatMap.js';
-import {createPlantRenderer} from './RealisticPlants.js';
+import {createPlantRenderer} from './KenneyPlants.js';
 
 function seededRandom(seed) {
   return () => {

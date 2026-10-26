@@ -2,7 +2,7 @@
 
 A cozy third-person Three.js exploration game with six scheduled residents, a small
 quest chain, regional flora discovery, a day/night clock, original procedural 3D
-assets, **48 self-hosted CC0 forest models**, phototextured branch cards, and
+assets, a harmonized **Kenney Nature Kit (CC0) world**, and
 **real USGS elevation and 2024 land-cover data** from the Lake Michigan dunes near Grand Haven.
 
 The whole runtime uses ES modules and static JSON. It needs no backend, database,
@@ -63,10 +63,11 @@ doesn't break module or heightmap loading.
 | `public/src/world/Terrain.js` | Height-grid interpolation, mesh, terrain colors and village grading |
 | `public/src/world/Vegetation.js` | Seeded flora distribution and regional species logic |
 | `public/src/world/HabitatMap.js` | 2024 USGS NLCD class mapping and artistic suitability rules |
-| `public/src/world/RealisticPlants.js` | Leaf-texture cards, real branches, plant instancing, distance LOD |
+| `public/src/world/KenneyPlants.js` | CC0 Kenney GLB catalog, warm palette normalization, species mapping, instancing and culling |
+| `public/src/world/KenneyDecor.js` | Kenney rocks, flowers, shrubs and mushrooms using terrain habitat placement |
 | `public/src/world/FoliageTextures.js` | Five optimized leaf/bark textures and GPU wind shader |
 | `public/src/world/GroundCover.js` | Player-relative grass and leaf litter instancing |
-| `public/src/world/FoundModels.js` | Optional, asynchronous CC0 GLB library with per-model batching and visibility culling |
+| `public/src/world/FoliageModels.js` | Volumetric procedural fallback for cattails or missing Kenney assets |
 | `public/src/world/Village.js` | Buildings, paths, dock, plaza, trees and walkable surfaces |
 | `public/src/world/Atmosphere.js` | Lake water, daylight, birds and clouds |
 | `public/src/actors/` | Third-person explorer and daily NPC movement |
@@ -75,7 +76,7 @@ doesn't break module or heightmap loading.
 | `public/data/michigan-world.json` | Modular region profile, species and residents |
 | `public/data/michigan-dem.json` | Preprocessed USGS 3DEP height grid |
 | `public/data/michigan-landcover.json` | 2024 USGS Annual NLCD grid (80 × 64) |
-| `public/data/model-library.json` | 48 source-linked CC0 models, types, scale and spawn budgets |
+| `public/data/kenney-nature.json` | Source, license and 13 curated Kenney Nature Kit models |
 
 To create a new region, provide a new elevation grid and world profile, change
 the profile URL in the composition root, and extend the region-specific village
@@ -133,3 +134,12 @@ Three.js 0.179.1, including its official `GLTFLoader` add-on, is bundled under
 its MIT license in `public/vendor/`. The game
 code is designed for further extension rather than being tied to one town.
 
+
+## Kenney Nature Kit art direction (current build)
+
+- The **active** trees, village shade trees, shrubs, flowers, rocks and mushrooms come from the self-hosted [Kenney Nature Kit](https://kenney.nl/assets/nature-kit) (CC0 1.0). The initial set contains 13 validated GLB models, with trunk-bearing pine and broadleaf variants. All geometry is tiny, and each model is loaded only once.
+- Colors and materials are replaced with one Michigan-inspired palette and physically lit flat-shaded materials. Trees are height-normalized despite Kenney's miniature source scale. Plant distribution is species-, terrain- and land-cover-aware. Identical plant geometry is batched with GPU instancing and distance culling.
+- Cattail heads and nearby fine grass remain authored geometry in the same faceted style. The earlier texture-card foliage and the separate 48-model forest catalog are preserved in the repository for reference but **are not rendered in the active game**.
+- Source meshes are visual stand-ins, not botanical scans. Model filenames are preserved under `public/assets/kenney/`, with licensing information in `public/data/kenney-nature.json`.
+- If an individual Kenney GLB fails, the species falls back to original volumetric low-poly geometry. All six resident schedules, five journal discoveries, and real USGS elevation data remain unchanged.
+- Run `npm run validate` for GLB structure, tree crown/trunk verification, and HTTP checks. GitHub Pages deployment runs validation before publishing.

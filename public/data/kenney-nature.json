@@ -1,0 +1,21 @@
+{
+  "pack": "Kenney Nature Kit",
+  "source": "https://kenney.nl/assets/nature-kit",
+  "license": "CC0-1.0",
+  "note": "Self-hosted curated GLB files; species colors and scale are game-defined. These are stylized visual proxies rather than botanically exact mesh reconstructions.",
+  "models": [
+    "tree_detailed",
+    "tree_simple",
+    "tree_pineTallB_detailed",
+    "tree_pineTallC_detailed",
+    "tree_pineDefaultB",
+    "tree_pineSmallC",
+    "tree_pineRoundB",
+    "plant_bushDetailed",
+    "plant_flatShort",
+    "flower_yellowC",
+    "flower_purpleA",
+    "rock_smallF",
+    "mushroom_tan"
+  ]
+}

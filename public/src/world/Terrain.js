@@ -24,12 +24,12 @@ export class Terrain {
       const y=this.heightAt(x,z); position.setY(i,y);
       const above=y-this.waterY;
       const slope=this.slopeAt(x,z);
-      if(above<1.1) color.set('#d9ca8e');
-      else if(above<4.5) color.set('#e0c992');
-      else if(slope>0.7) color.set('#a6a18d');
-      else if(above>38) color.set('#6f9665');
-      else color.set('#84aa6a');
-      const variation=Math.sin(x*0.032+z*0.021)*0.034 + Math.cos(z*0.043-x*0.015)*0.025;
+      if(above<1.1) color.set('#d8c49c');
+      else if(above<4.5) color.set('#d8c499');
+      else if(slope>0.7) color.set('#a5a292');
+      else if(above>38) color.set('#6f8963');
+      else color.set('#8aa673');
+      const variation=Math.sin(x*0.032+z*0.021)*0.022 + Math.cos(z*0.043-x*0.015)*0.016;
       color.offsetHSL(0,0,variation);
       colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
     }

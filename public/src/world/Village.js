@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createPlantRenderer} from './RealisticPlants.js';
+import {createPlantRenderer} from './KenneyPlants.js';
 
 const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.84,...extra});
 

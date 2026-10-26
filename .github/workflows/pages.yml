@@ -23,6 +23,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Validate bundled game and Kenney assets
+        run: |
+          npm run validate
+          node --check public/src/main.js
+          node --check public/src/world/KenneyPlants.js
+          node --check public/src/world/KenneyDecor.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
