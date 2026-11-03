@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {bilinearElevation} from './StonyElevation.js';
 
 // Coordinates are meters in an east/right, south/down local tangent plane.
 export const project=(lon,lat,bounds)=>{
@@ -68,15 +69,23 @@ export class StonyTerrain {
     this.group=new THREE.Group();scene.add(this.group);
     this.makeTerrain();
     this.makeLakes();
+    this.detailTiles=new Map();
+    this.detailCell=null;
+    this.detailSize=160;
+    this.detailRadius=2;
+    this.detailSegments=20;
+    this.detailGroup=new THREE.Group();
+    this.group.add(this.detailGroup);
+    this.detailMaterial=this.groundMaterial.clone();
+    this.detailMaterial.map=this.groundMaterial.map.clone();
+    this.detailMaterial.map.repeat.set(3,3);
+    this.detailMaterial.map.needsUpdate=true;
+    this.detailMaterial.polygonOffset=true;
+    this.detailMaterial.polygonOffsetFactor=-2;
+    this.detailMaterial.polygonOffsetUnits=-2;
   }
   rawElevation(x,z){
-    const {width,height,samples}=this.dem;
-    const fx=clamp((x/this.width+.5)*(width-1),0,width-1);
-    const fz=clamp((z/this.depth+.5)*(height-1),0,height-1);
-    const ax=Math.floor(fx),az=Math.floor(fz),bx=Math.min(width-1,ax+1),bz=Math.min(height-1,az+1);
-    const tx=fx-ax,tz=fz-az;
-    return lerp(lerp(samples[az][ax],samples[az][bx],tx),
-      lerp(samples[bz][ax],samples[bz][bx],tx),tz);
+    return bilinearElevation(this.dem,x,z,this.width,this.depth);
   }
   rawHeight(x,z){return this.rawElevation(x,z)-this.datum;}
   waterAt(x,z){
@@ -99,7 +108,7 @@ export class StonyTerrain {
     return Math.abs(x)<this.width/2-margin&&Math.abs(z)<this.depth/2-margin;
   }
   makeTerrain(){
-    const segments=matchMedia('(pointer:coarse)').matches?128:192;
+    const segments=matchMedia('(pointer:coarse)').matches?160:224;
     const geometry=new THREE.PlaneGeometry(this.width,this.depth,segments,segments);
     geometry.rotateX(-Math.PI/2);
     const pos=geometry.getAttribute('position');
@@ -124,7 +133,56 @@ export class StonyTerrain {
     });
     const mesh=new THREE.Mesh(geometry,mat);
     mesh.receiveShadow=true;
+    this.groundMaterial=mat;
     this.group.add(mesh);
+  }
+  // Moving 5x5 terrain detail tiles add 8 m surface geometry only where needed.
+  // Distant ground remains a single inexpensive mesh. Every vertex samples
+  // the same actual DEM as the player, trails and foliage placement.
+  updateDetail(position){
+    const cx=Math.floor(position.x/this.detailSize);
+    const cz=Math.floor(position.z/this.detailSize);
+    const key=cx+','+cz;
+    if(key===this.detailCell)return;
+    this.detailCell=key;
+    const retain=new Set();
+    for(let dx=-this.detailRadius;dx<=this.detailRadius;dx++)
+      for(let dz=-this.detailRadius;dz<=this.detailRadius;dz++){
+        const tx=cx+dx,tz=cz+dz,k=tx+','+tz;
+        const x=(tx+.5)*this.detailSize,z=(tz+.5)*this.detailSize;
+        if(!this.positionInBounds(x,z,0))continue;
+        retain.add(k);
+        if(this.detailTiles.has(k))continue;
+        const geo=new THREE.PlaneGeometry(this.detailSize,this.detailSize,
+          this.detailSegments,this.detailSegments);
+        geo.rotateX(-Math.PI/2);
+        const vertices=geo.getAttribute('position');
+        const colors=new Float32Array(vertices.count*3);
+        const color=new THREE.Color();
+        for(let i=0;i<vertices.count;i++){
+          const wx=x+vertices.getX(i),wz=z+vertices.getZ(i);
+          const h=this.heightAt(wx,wz);
+          vertices.setY(i,h+.06);
+          const slope=this.slopeAt(wx,wz);
+          if(this.waterAt(wx,wz))color.set('#7d9b8d');
+          else if(slope>.52)color.set('#8f9681');
+          else if(h>40)color.set('#778d64');
+          else color.set('#8eaa75');
+          colors.set([color.r,color.g,color.b],i*3);
+        }
+        geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+        geo.computeVertexNormals();
+        const tile=new THREE.Mesh(geo,this.detailMaterial);
+        tile.position.set(x,0,z);
+        tile.receiveShadow=true;
+        this.detailTiles.set(k,tile);
+        this.detailGroup.add(tile);
+      }
+    for(const [k,tile] of this.detailTiles)if(!retain.has(k)){
+      this.detailGroup.remove(tile);
+      tile.geometry.dispose();
+      this.detailTiles.delete(k);
+    }
   }
   makeLakes(){
     const material=new THREE.MeshStandardMaterial({
