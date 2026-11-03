@@ -196,20 +196,39 @@ def osm():
     payload=None
     providers=[
         "https://overpass.kumi.systems/api/interpreter",
-        "https://overpass.nchc.org.tw/api/interpreter",
+        "https://overpass.osm.jp/api/interpreter",
         "https://overpass-api.de/api/interpreter",
         "https://overpass.private.coffee/api/interpreter"
     ]
     for endpoint in providers:
         try:
-            payload=json.loads(request(endpoint,data={"data":QUERY},timeout=150))
+            payload=json.loads(request(endpoint,data={"data":QUERY},timeout=70))
             if len(payload.get("elements",[]))<25:raise RuntimeError("Unexpectedly sparse OSM result")
             print(f"OSM: {len(payload['elements'])} features from {endpoint}",flush=True)
             break
         except Exception as error:
             print(f"OSM mirror unavailable: {endpoint}: {error}",flush=True)
     if payload is None:
-        raise RuntimeError("No OpenStreetMap Overpass service returned real trails; stopping deployment.")
+        # A previous successfully published snapshot is still real, sourced
+        # OSM geometry. Prefer that over blocking every future deployment when
+        # public Overpass mirrors are unavailable. Never invent coordinates.
+        published="https://hambonesoftware.github.io/sunward/data/stony-creek-map.json"
+        try:
+            snapshot=json.loads(request(published,timeout=40))
+            bounds=snapshot.get("bounds",{})
+            if (not snapshot.get("source","").startswith("© OpenStreetMap")
+                or len(snapshot.get("paths",[]))<10
+                or not snapshot.get("water")
+                or abs(bounds.get("west",0)-WEST)>.001
+                or abs(bounds.get("north",0)-NORTH)>.001):
+                raise ValueError("Published snapshot failed provenance and geometry checks")
+            snapshot["retrievalNote"]="Previously published, genuine OpenStreetMap snapshot; live Overpass services unavailable"
+            snapshot["snapshotSource"]=published
+            (DATA/"stony-creek-map.json").write_text(json.dumps(snapshot,separators=(",",":")))
+            print(f"OSM: reused verified published snapshot with {len(snapshot['paths'])} paths",flush=True)
+            return snapshot
+        except Exception as error:
+            raise RuntimeError("Both live OpenStreetMap and the last genuine published map snapshot are unavailable") from error
     paths=[]; water=[]; woods=[]; landmarks=[]
     used_polygons=set()
     for el in payload["elements"]:
