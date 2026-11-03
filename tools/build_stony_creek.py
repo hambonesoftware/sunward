@@ -7,7 +7,10 @@ No synthetic terrain is silently substituted for real geography.
 import json
 import math
 import os
+import sys
 import time
+from array import array
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlencode
@@ -19,7 +22,7 @@ DATA = ROOT / "public" / "data"
 WEST, SOUTH, EAST, NORTH = -83.125, 42.704, -83.045, 42.787
 CENTER_LAT = (NORTH + SOUTH) / 2
 CENTER_LON = (WEST + EAST) / 2
-SIZE = 257
+SIZE = 1025  # sample spacing approximately 6–9 m; source accuracy may be coarser
 HEADERS = {"User-Agent": "Sunward-Stony-Creek-Explorer/1.0 (static open-data exhibit)", "Accept": "*/*"}
 
 
@@ -62,7 +65,7 @@ def mercator_tile(lon, lat, zoom):
 
 
 def export_terrarium():
-    zoom = 12
+    zoom = 14  # approximately 7 m/pixel in southeast Michigan
     tiles = {}
     samples = []
     for iy in range(SIZE):
@@ -77,10 +80,23 @@ def export_terrarium():
                 url = f"https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{zoom}/{tile_x}/{tile_y}.png"
                 img = Image.open(BytesIO(request(url, timeout=45))).convert("RGB")
                 tiles[key] = img.load()
-            pixel_x = min(255, max(0, int((tx - tile_x)*256)))
-            pixel_y = min(255, max(0, int((ty - tile_y)*256)))
-            r,g,b = tiles[key][pixel_x,pixel_y]
-            row.append(round(r*256+g+b/256-32768,3))
+            # Bilinear resampling removes pixel terraces in the Mapzen fallback.
+            px,py=(tx-tile_x)*256-.5,(ty-tile_y)*256-.5
+            def pixel_height(ix,iy):
+                dx,lx=divmod(ix,256)
+                dy,ly=divmod(iy,256)
+                key2=(tile_x+dx,tile_y+dy)
+                if key2 not in tiles:
+                    url2=f"https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{zoom}/{key2[0]}/{key2[1]}.png"
+                    img2=Image.open(BytesIO(request(url2,timeout=45))).convert("RGB")
+                    tiles[key2]=img2.load()
+                r,g,b=tiles[key2][lx,ly]
+                return r*256+g+b/256-32768
+            x0,y0=math.floor(px),math.floor(py)
+            fx,fy=px-x0,py-y0
+            h00=pixel_height(x0,y0);h10=pixel_height(x0+1,y0)
+            h01=pixel_height(x0,y0+1);h11=pixel_height(x0+1,y0+1)
+            row.append(round((h00*(1-fx)+h10*fx)*(1-fy)+(h01*(1-fx)+h11*fx)*fy,3))
         samples.append(row)
     return samples, "Mapzen terrain tiles (public real elevation, Terrarium encoding)"
 
@@ -92,15 +108,33 @@ def terrain():
         print(f"USGS 3DEP export unavailable, trying real Mapzen DEM: {error}", flush=True)
         samples, source = export_terrarium()
     heights = [v for row in samples for v in row]
-    result = {
-        "source": source,
-        "bounds": {"west": WEST,"south":SOUTH,"east":EAST,"north":NORTH},
-        "width": SIZE, "height": SIZE, "samples": samples,
-        "minimum": round(min(heights),3), "maximum": round(max(heights),3)
+    origin=math.floor(min(heights))
+    encoded=array("H")
+    for height in heights:
+        cm=round((height-origin)*100)
+        if not 0 <= cm <= 65535:
+            raise ValueError("DEM elevation range cannot fit in uint16 centimeters")
+        encoded.append(cm)
+    if sys.byteorder!="little":
+        encoded.byteswap()
+    binary_name="stony-creek-dem.bin"
+    (DATA/binary_name).write_bytes(encoded.tobytes())
+    result={
+        "source":source,
+        "bounds":{"west":WEST,"south":SOUTH,"east":EAST,"north":NORTH},
+        "width":SIZE,"height":SIZE,
+        "minimum":round(min(heights),3),"maximum":round(max(heights),3),
+        "gridSpacingMeters":{
+            "eastWest":round((EAST-WEST)*111320*math.cos(math.radians(CENTER_LAT))/(SIZE-1),2),
+            "northSouth":round((NORTH-SOUTH)*111132/(SIZE-1),2)
+        },
+        "encoding":{"file":binary_name,"type":"uint16-le","offset":origin,"scale":.01},
+        "retrievedAt":datetime.now(timezone.utc).isoformat(),
+        "resolutionNote":"Export sampling interval does not guarantee source DEM resolution."
     }
     assert 170 < result["minimum"] < 330 and 200 < result["maximum"] < 420
     (DATA/"stony-creek-dem.json").write_text(json.dumps(result,separators=(",",":")))
-    print(f"Terrain: {source}, {result['minimum']}–{result['maximum']}m",flush=True)
+    print(f"Terrain: {source}, {SIZE}x{SIZE}, {result['minimum']}–{result['maximum']}m",flush=True)
     return result
 
 
@@ -199,7 +233,8 @@ def osm():
         highway=tags.get("highway","")
         if highway in ("path","footway","cycleway","track","pedestrian","service","residential"):
             paths.append({"coords":poly,"name":name,"kind":highway,
-                          "surface":tags.get("surface",""),"foot":tags.get("foot","")})
+                          "surface":tags.get("surface",""),"foot":tags.get("foot",""),
+                          "width":tags.get("width",""),"bridge":tags.get("bridge","")})
         if is_closed(poly):
             natural=tags.get("natural","")
             if natural=="water" or tags.get("water") in ("lake","reservoir","pond"):
