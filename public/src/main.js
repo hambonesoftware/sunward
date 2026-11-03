@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {Input} from './engine/Input.js';
 import {StonyTerrain,project} from './world/StonyTerrain.js';
+import {loadStonyElevation} from './world/StonyElevation.js';
 import {StonyTrails} from './world/StonyTrails.js';
 import {StonyFoliagePass2} from './world/StonyFoliagePass2.js';
 import {loadKenneyNatureAssets} from './world/KenneyPlants.js';
@@ -88,6 +89,7 @@ class Explorer{
     let p=project(destination.lon,destination.lat,this.terrain.bounds);
     p=this.nearestPath(p,200)||p;
     this.position.set(p.x,this.terrain.surfaceAt(p.x,p.z)+1.75,p.z);
+    this.terrain.updateDetail(this.position);
     this.heading=0;this.pitch=-.02;
     this.camera?.position.copy(this.position);
     const label=document.getElementById('location-pill');
@@ -159,6 +161,7 @@ class Explorer{
       }
       const eye=this.terrain.surfaceAt(this.position.x,this.position.z)+1.72;
       this.position.y=THREE.MathUtils.lerp(this.position.y,eye,Math.min(dt*9,1));
+      this.terrain.updateDetail(this.position);
       this.camera.position.copy(this.position);
       this.camera.rotation.order='YXZ';
       this.camera.rotation.y=this.heading;
@@ -175,18 +178,18 @@ class Explorer{
 }
 async function start(){
   try{
-    const [demResponse,mapResponse,zonesResponse,kenneyAssets,textureAssets]=await Promise.all([
-      fetch(new URL('../data/stony-creek-dem.json',import.meta.url)),
+    const [dem,mapResponse,zonesResponse,kenneyAssets,textureAssets]=await Promise.all([
+      loadStonyElevation(new URL('../data/stony-creek-dem.json',import.meta.url)),
       fetch(new URL('../data/stony-creek-map.json',import.meta.url)),
       fetch(new URL('../data/stony-foliage-zones.json',import.meta.url)),
       loadKenneyNatureAssets(),
       loadFoliageTextures()
     ]);
-    if(!demResponse.ok||!mapResponse.ok||!zonesResponse.ok)
+    if(!mapResponse.ok||!zonesResponse.ok)
       throw Error('The actual Stony Creek terrain/trail data is missing from this deployment.');
-    const [dem,map,zones]=await Promise.all([demResponse.json(),mapResponse.json(),zonesResponse.json()]);
+    const [map,zones]=await Promise.all([mapResponse.json(),zonesResponse.json()]);
     const assets={...kenneyAssets,...textureAssets,grassMaterial:kenneyAssets.grassMaterial};
-    if(!dem.samples||!map.paths?.length)throw Error('Geographic data could not be verified.');
+    if(!dem.heights||!map.paths?.length)throw Error('Geographic data could not be verified.');
     new Explorer(dem,map,assets,zones);
     document.documentElement.dataset.stonyReady='true';
   }catch(error){
