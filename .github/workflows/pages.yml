@@ -1,7 +1,7 @@
 name: Deploy Stony Creek Explorer
 on:
   push:
-    branches: [main]
+    branches: [main, geographic-fidelity-pass1]
   workflow_dispatch:
 permissions:
   contents: read
@@ -52,13 +52,16 @@ jobs:
           path: stony-creek-smoke.png
           if-no-files-found: ignore
       - name: Configure Pages
+        if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
         with:
           enablement: true
       - name: Upload static explorer
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
       - name: Deploy
+        if: github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
