@@ -27,6 +27,8 @@ jobs:
       - name: Validate terrain, mapped trails, game and modules
         run: |
           node tools/validate_stony.mjs
+          node tools/test_stony_elevation.mjs
+          node --check public/src/world/StonyElevation.js
           npm run validate
           node --check public/src/main.js
           node --check public/src/world/StonyTerrain.js
