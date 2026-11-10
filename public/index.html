@@ -15,29 +15,50 @@
   <header class="topbar">
     <div class="title-wrap"><span class="place-title">STONY CREEK</span><span class="place-subtitle">METROPARK · MICHIGAN</span></div>
     <div class="top-actions">
-      <button id="map-button" class="quiet-button" aria-expanded="false" aria-controls="map-panel">Map</button>
+      <button id="map-button" class="quiet-button" aria-expanded="false" aria-controls="world-map">Map</button>
       <button id="pace-button" class="quiet-button" aria-pressed="false">Walk</button>
     </div>
   </header>
   <div class="crosshair" aria-hidden="true"></div>
-  <section id="map-panel" class="map-panel" hidden aria-label="Park navigation">
-    <div class="panel-top"><strong>Explore a location</strong><button id="map-close" aria-label="Close map">×</button></div>
-    <label for="destinations">Start walking near</label>
-    <select id="destinations">
-      <option value="nature">Nature Center</option>
-      <option value="eastwood">Eastwood Beach</option>
-      <option value="baypoint">Baypoint Beach</option>
-      <option value="shelden">Shelden Trails</option>
-      <option value="trolley">Trolley Trails</option>
-    </select>
-    <canvas id="park-map" width="296" height="310" aria-label="Outline of trails and lakes"></canvas>
-    <p class="data-note" id="data-source">Real elevation + OpenStreetMap paths; trees and structures are illustrative, not surveyed.</p>
-    <a href="https://www.metroparks.com/wp-content/uploads/2024/04/2024StonyCreekParkMap.pdf" target="_blank" rel="noopener noreferrer">Official Stony Creek park map ↗</a>
-    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+  <div id="minimap" class="minimap" role="button" tabindex="0" aria-label="Minimap and compass. Open the park map">
+    <canvas id="minimap-canvas" aria-hidden="true"></canvas>
+    <span id="minimap-bearing" class="minimap-bearing">N 000°</span>
+  </div>
+  <section id="world-map" class="world-map" hidden aria-label="Park map">
+    <canvas id="world-map-canvas" aria-label="Map of Stony Creek trails, roads and lakes. Tap to set a waypoint"></canvas>
+    <div class="map-head">
+      <div class="map-title"><strong>STONY CREEK</strong><span>Park map</span></div>
+      <button id="map-close" class="quiet-button" aria-label="Close map">Close</button>
+    </div>
+    <div class="map-zoom">
+      <button id="map-zoom-in" aria-label="Zoom in">+</button>
+      <button id="map-zoom-out" aria-label="Zoom out">−</button>
+      <button id="map-center" aria-label="Center on me">◎</button>
+    </div>
+    <aside class="map-side">
+      <p id="waypoint-info" class="waypoint-info">Tap the map to set a waypoint.</p>
+      <button id="map-clear" class="map-clear" disabled>Clear waypoint</button>
+      <h2>Fast travel</h2>
+      <div id="travel-list" class="travel-list"></div>
+      <h2>Legend</h2>
+      <ul class="legend">
+        <li><i class="road"></i>Road</li>
+        <li><i style="background:#c99a4e"></i>Paved bike path</li>
+        <li><i class="dash"></i>Trail</li>
+        <li><i style="background:#5f9fbf"></i>Water</li>
+        <li><i style="background:#7f9f6c"></i>Woods</li>
+        <li><i style="background:#8fb3a0"></i>Wetland</li>
+        <li><i class="route"></i>GPS route</li>
+      </ul>
+      <p class="data-note" id="data-source">Real elevation + OpenStreetMap paths; trees and structures are illustrative, not surveyed. Routes follow mapped paths and are not hiking directions.</p>
+      <a href="https://www.metroparks.com/wp-content/uploads/2024/04/2024StonyCreekParkMap.pdf" target="_blank" rel="noopener noreferrer">Official Stony Creek park map ↗</a>
+      <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+    </aside>
   </section>
+  <div id="toast" class="toast" role="status" hidden></div>
   <div class="location-pill" id="location-pill">Nature Center trails</div>
   <div id="joystick" class="joystick" aria-label="Move around the park"><div class="joystick-thumb"></div></div>
-  <div class="help">Drag to look · WASD or thumbstick to walk · Shift to jog</div>
+  <div class="help">Drag to look · WASD or thumbstick to walk · Shift to jog · M for map</div>
   <section id="start-screen" class="start-screen">
     <div class="intro">
       <span class="intro-eyebrow">SUNWARD · REAL PLACES</span>

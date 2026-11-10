@@ -6,6 +6,7 @@ import {StonyTrails} from './world/StonyTrails.js';
 import {StonyFoliagePass2} from './world/StonyFoliagePass2.js';
 import {loadKenneyNatureAssets} from './world/KenneyPlants.js';
 import {loadFoliageTextures} from './world/FoliageTextures.js';
+import {MapHUD} from './ui/MapHUD.js';
 
 // Publicly documented or referenced approximate access points, not building footprints.
 const PLACES={
@@ -60,21 +61,12 @@ class Explorer{
       document.getElementById('start-screen').style.display='none';
       this.running=true;
     });
-    const mapButton=document.getElementById('map-button'),
-      panel=document.getElementById('map-panel');
-    const toggle=visible=>{
-      panel.hidden=!visible;
-      mapButton.setAttribute('aria-expanded',String(visible));
-      if(visible)this.drawMap();
-    };
-    mapButton.addEventListener('click',()=>toggle(panel.hidden));
-    document.getElementById('map-close').addEventListener('click',()=>toggle(false));
-    document.getElementById('destinations').addEventListener('change',event=>{
-      this.goTo(event.target.value);
+    for(const place of Object.values(PLACES))Object.assign(place,project(place.lon,place.lat,this.terrain.bounds));
+    this.hud=new MapHUD({terrain:this.terrain,map,places:PLACES,onTravel:name=>{
+      this.goTo(name);
       this.plants.update(this.position);
-      this.drawMap();
-      toggle(false);
-    });
+    }});
+    if(new URLSearchParams(location.search).has('debug'))window.__stony=this;
     const pace=document.getElementById('pace-button');
     pace.addEventListener('click',()=>{
       this.jog=!this.jog;
@@ -108,34 +100,6 @@ class Explorer{
     }
     return best;
   }
-  drawMap(){
-    const canvas=document.getElementById('park-map');
-    const ctx=canvas.getContext('2d');
-    const w=canvas.width,h=canvas.height;
-    ctx.clearRect(0,0,w,h);ctx.fillStyle='#b5c6a3';ctx.fillRect(0,0,w,h);
-    const point=p=>[w*(p.x/this.terrain.width+.5),h*(p.z/this.terrain.depth+.5)];
-    ctx.fillStyle='#789eae';
-    for(const lake of this.terrain.water){
-      ctx.beginPath();
-      lake.points.forEach((p,i)=>{
-        const [x,y]=point(p);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-      });
-      ctx.closePath();ctx.fill();
-    }
-    for(const line of this.trails.lines){
-      ctx.beginPath();
-      line.points.forEach((p,i)=>{
-        const [x,y]=point(p);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-      });
-      ctx.strokeStyle=line.kind==='cycleway'?'#b7a580':'#ede1c5';
-      ctx.lineWidth=line.kind==='cycleway'?1.9:.75;
-      ctx.stroke();
-    }
-    const [x,y]=point(this.position);
-    ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle='#174e35';ctx.fill();
-    ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.strokeStyle='#f9f9f2';ctx.lineWidth=2;ctx.stroke();
-    ctx.font='bold 12px system-ui';ctx.fillStyle='#254a35';ctx.fillText('N',w-21,18);
-  }
   resize(){
     this.camera.aspect=innerWidth/innerHeight;
     this.camera.updateProjectionMatrix();
@@ -146,12 +110,18 @@ class Explorer{
     this.last=timestamp;this.elapsed+=dt;
     if(this.running){
       const look=this.input.consumeLook();
-      this.heading-=look.x*.003;
-      this.pitch=clamp(this.pitch-look.y*.0028,-1.45,1.45);
-      const move=this.input.moveAxis();
-      const walk=this.jog||this.input.sprinting()?3.9:1.85;
-      const dx=(move.x*Math.cos(this.heading)+move.y*Math.sin(this.heading))*walk*dt;
-      const dz=(move.x*Math.sin(this.heading)-move.y*Math.cos(this.heading))*walk*dt;
+      const mapOpen=this.hud.open;
+      if(!mapOpen){
+        this.heading-=look.x*.003;
+        this.pitch=clamp(this.pitch-look.y*.0028,-1.45,1.45);
+      }
+      const move=mapOpen?{x:0,y:0}:this.input.moveAxis();
+      const jogging=this.jog||this.input.sprinting();
+      const walk=jogging?3.9:1.85;
+      // Camera looks down -z at heading 0 and turns left as heading grows:
+      // forward is (-sin h, -cos h) and right is (cos h, -sin h).
+      const dx=(move.x*Math.cos(this.heading)-move.y*Math.sin(this.heading))*walk*dt;
+      const dz=(-move.x*Math.sin(this.heading)-move.y*Math.cos(this.heading))*walk*dt;
       const nx=this.position.x+dx,nz=this.position.z+dz;
       const oldGround=this.terrain.surfaceAt(this.position.x,this.position.z);
       if(this.terrain.positionInBounds(nx,nz,10)&&
@@ -171,8 +141,10 @@ class Explorer{
       this.sun.position.set(this.position.x-120,this.position.y+170,this.position.z-100);
       this.sun.target.position.copy(this.position);this.sun.target.position.y=this.position.y-2;
       this.sun.target.updateMatrixWorld();
+      this.hud.update(dt,this.position,this.heading,jogging);
     }
-    this.renderer.render(this.scene,this.camera);
+    // The full-screen map covers the world, so skip drawing it while open.
+    if(!this.hud.open)this.renderer.render(this.scene,this.camera);
     requestAnimationFrame(t=>this.frame(t));
   }
 }

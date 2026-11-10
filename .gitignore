@@ -1,3 +1,8 @@
 public/assets/foliage/*-source.png
 public/data/michigan-nlcd-source.tif
 node_modules/
+
+# Generated in CI by tools/build_stony_creek.py
+public/data/stony-creek-dem.json
+public/data/stony-creek-dem.bin
+public/data/stony-creek-map.json
