@@ -51,6 +51,9 @@ jobs:
           name: stony-creek-render
           path: stony-creek-smoke.png
           if-no-files-found: ignore
+      - name: Version asset URLs so browsers never mix an old script with a new page
+        if: github.ref == 'refs/heads/main'
+        run: node tools/version_assets.mjs public "${GITHUB_SHA::10}"
       - name: Configure Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
